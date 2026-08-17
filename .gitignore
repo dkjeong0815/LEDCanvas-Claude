@@ -1,0 +1,7 @@
+node_modules/
+dist/
+*.local
+.DS_Store
+
+# 테스트용 현장 사진 (public/은 그대로 배포되므로 커밋 금지)
+public/test-wall.jpg
