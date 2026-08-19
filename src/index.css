@@ -517,7 +517,10 @@ input[type="number"] {
 
 .layer {
   position: absolute;
-  border: 2px solid;
+  /* The outline is drawn by WorkspaceView, not a border: a border sits in the
+     box model, so hiding it used to leave a 2px strip of the background veil
+     showing as a thin white frame — and it shrank the content below the face's
+     real size. An outline costs no layout at all. */
   border-radius: 3px;
   background: rgba(255, 255, 255, 0.04);
   cursor: grab;

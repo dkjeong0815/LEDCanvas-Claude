@@ -129,9 +129,11 @@ export default function WorkspaceView({
             className={`layer ${selected ? "selected" : ""}`}
             style={{
               ...box,
-              // The 2px border stays in the box model even when hidden, so the
-              // face keeps its exact size; only its colour goes away.
-              borderColor: display.showBorders ? color : "transparent",
+              // Drawn as an outline, pulled inside the box: it takes no space,
+              // so the content fills the face's real size whether the outline
+              // is on or off.
+              outline: display.showBorders ? `2px solid ${color}` : undefined,
+              outlineOffset: -2,
               boxShadow: panelShadow(box.width, display, selected, layer.content?.glowColor),
             }}
             onPointerDown={onLayerPointerDown ? (e) => onLayerPointerDown(e, layer) : undefined}
