@@ -111,10 +111,12 @@ export const DEFAULT_DISPLAY: DisplayOptions = {
   showBorders: true,
   showDims: true,
   shadow: true,
+  shadowBlur: 1,
   glow: 0.5,
 };
 
 export const MAX_GLOW = 1.2;
+export const MAX_SHADOW_BLUR = 3;
 
 const initialCalibrationState = {
   referenceKind: "a4" as ReferenceKind,

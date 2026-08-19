@@ -68,9 +68,10 @@ function drawPanelShadow(
   }
 
   if (display.shadow) {
-    passes.push({ color: "rgba(0, 0, 0, 0.45)", blur: w * 0.07, spread: 0, offsetY: w * 0.025 });
-    passes.push({ color: "rgba(0, 0, 0, 0.75)", blur: w * 0.03, spread: 0, offsetY: w * 0.01 });
-    passes.push({ color: "rgba(0, 0, 0, 0.95)", blur: w * 0.012, spread: w * 0.004, offsetY: 0 });
+    const b = w * display.shadowBlur;
+    passes.push({ color: "rgba(0, 0, 0, 0.45)", blur: b * 0.07, spread: 0, offsetY: w * 0.025 });
+    passes.push({ color: "rgba(0, 0, 0, 0.75)", blur: b * 0.03, spread: 0, offsetY: w * 0.01 });
+    passes.push({ color: "rgba(0, 0, 0, 0.95)", blur: b * 0.012, spread: w * 0.004, offsetY: 0 });
   }
 
   if (!passes.length) return;

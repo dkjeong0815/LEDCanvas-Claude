@@ -45,10 +45,13 @@ function panelShadow(widthPx: number, display: DisplayOptions, glowColor?: strin
   if (display.shadow) {
     // Three stages from the edge outwards. The first hugs the edge and is
     // nearly opaque black — that contact line is what makes a panel look like
-    // it is standing off the wall rather than printed on it.
-    parts.push(`0 0 ${widthPx * 0.012}px ${widthPx * 0.004}px rgba(0, 0, 0, 0.95)`);
-    parts.push(`0 ${widthPx * 0.010}px ${widthPx * 0.030}px rgba(0, 0, 0, 0.75)`);
-    parts.push(`0 ${widthPx * 0.025}px ${widthPx * 0.070}px rgba(0, 0, 0, 0.45)`);
+    // it is standing off the wall rather than printed on it. Only the blur
+    // takes the slider: the offsets place the shadow and the spread sets how
+    // far the black reaches, and softening should not move either.
+    const b = widthPx * display.shadowBlur;
+    parts.push(`0 0 ${b * 0.012}px ${widthPx * 0.004}px rgba(0, 0, 0, 0.95)`);
+    parts.push(`0 ${widthPx * 0.010}px ${b * 0.030}px rgba(0, 0, 0, 0.75)`);
+    parts.push(`0 ${widthPx * 0.025}px ${b * 0.070}px rgba(0, 0, 0, 0.45)`);
   }
 
   if (display.glow > 0 && glowColor) {

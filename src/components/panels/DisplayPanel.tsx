@@ -1,4 +1,4 @@
-import { MAX_GLOW, useStore } from "../../state/store";
+import { MAX_GLOW, MAX_SHADOW_BLUR, useStore } from "../../state/store";
 
 /**
  * What the arrangement shows on top of the content. These options travel to
@@ -51,6 +51,23 @@ export default function DisplayPanel() {
         </label>
       </div>
 
+      {display.shadow && (
+        <label className="slider-row">
+          <span>
+            그림자 블러
+            <em>{display.shadowBlur.toFixed(1)}×</em>
+          </span>
+          <input
+            type="range"
+            min={0.2}
+            max={MAX_SHADOW_BLUR}
+            step={0.1}
+            value={display.shadowBlur}
+            onChange={(e) => setDisplay({ shadowBlur: Number(e.target.value) })}
+          />
+        </label>
+      )}
+
       <label className="slider-row">
         <span>
           화면 빛 번짐
@@ -66,6 +83,7 @@ export default function DisplayPanel() {
         />
       </label>
       <p className="muted small">
+        블러를 낮추면 벽에 밀착한 느낌, 올리면 벽에서 떨어져 나온 느낌이 납니다. 빛 번짐은
         콘텐츠 평균색이 벽에 번집니다. 어두운 실내 사진에서 효과가 크고, 밝은 사진에서는 0이
         자연스럽습니다.
       </p>

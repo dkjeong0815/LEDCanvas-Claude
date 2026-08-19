@@ -107,6 +107,12 @@ export interface DisplayOptions {
   showDims: boolean;
   /** drop shadow, so a face reads as mounted off the wall */
   shadow: boolean;
+  /**
+   * Multiplies the shadow's blur. 1 is the contact-shadow look — a hard, tight
+   * edge; higher values soften it towards a face standing further off the wall
+   * or lit by a broader source.
+   */
+  shadowBlur: number;
   /** strength of the content-coloured light spill, 0 to 0.6 */
   glow: number;
 }
