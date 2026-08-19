@@ -1,3 +1,4 @@
+import { Fragment } from "react";
 import { wallBounds } from "../state/store";
 import { layerSizeCm } from "../lib/cabinets";
 import { layerColor } from "../lib/palette";
@@ -31,47 +32,39 @@ export interface WorkspaceViewProps {
  * The same arrangement is drawn at editor zoom, at sheet size and at the
  * photo's native resolution for the PNG; a constant blur would look right in
  * exactly one of the three.
+ *
+ * Nothing is drawn above the face. A panel hung on a wall is lit from above,
+ * so light and shade both fall away from the top edge — anything spilling
+ * upwards reads as a sticker. The top is cut off by clip-path rather than by
+ * offsetting the shadow downwards, because an offset that clears the top also
+ * drags the side shading down with it.
  */
-function panelShadow(
-  widthPx: number,
-  display: DisplayOptions,
-  selected: boolean,
-  glowColor?: string
-) {
+function panelShadow(widthPx: number, display: DisplayOptions, glowColor?: string) {
   const parts: string[] = [];
-  // The selection ring rides with the border toggle. With borders off the face
-  // is meant to look like a panel on a wall, and a white ring around it gives
-  // the game away just as much as the outline does — so editing aids come back
-  // together, by turning borders on.
-  if (selected && display.showBorders) parts.push("0 0 0 2px rgba(255, 255, 255, 0.5)");
+
   if (display.shadow) {
-    parts.push(`0 ${widthPx * 0.012}px ${widthPx * 0.045}px rgba(0, 0, 0, 0.42)`);
+    // Three stages from the edge outwards. The first hugs the edge and is
+    // nearly opaque black — that contact line is what makes a panel look like
+    // it is standing off the wall rather than printed on it.
+    parts.push(`0 0 ${widthPx * 0.012}px ${widthPx * 0.004}px rgba(0, 0, 0, 0.95)`);
+    parts.push(`0 ${widthPx * 0.010}px ${widthPx * 0.030}px rgba(0, 0, 0, 0.75)`);
+    parts.push(`0 ${widthPx * 0.025}px ${widthPx * 0.070}px rgba(0, 0, 0, 0.45)`);
   }
+
   if (display.glow > 0 && glowColor) {
-    // Two stages, because that is how a lit screen actually throws light: a
-    // tight bright rim right at the edge, and a wide soft wash beyond it. One
-    // blur alone reads as a coloured border rather than as light.
+    // Behind the shading, so the edge stays dark and the light shows further
+    // out. Two stages, because that is how a lit screen throws light: a tight
+    // bright rim and a wide soft wash. One blur alone reads as a coloured
+    // border rather than as light.
     parts.push(`0 0 ${widthPx * 0.10}px ${widthPx * 0.025}px rgba(${glowColor}, ${display.glow})`);
     parts.push(
       `0 0 ${widthPx * 0.34}px ${widthPx * 0.07}px rgba(${glowColor}, ${display.glow * 0.55})`
     );
   }
-  // "none" rather than undefined: the stylesheet still carries a selection
-  // ring for .layer.selected, and letting it through would defeat the toggle.
-  return parts.length ? parts.join(", ") : "none";
+
+  return parts.length ? parts.join(", ") : undefined;
 }
 
-/**
- * The arrangement itself: rectified wall, layers where the user put them, each
- * layer's content inside it — the video plays in the editor, and the still
- * captured from it stands in on paper.
- *
- * The editor and the printed sheet both render through here, on purpose. When
- * printing re-drew the same scene with its own canvas code, the two drifted —
- * different border colours, missing captions, different clipping — and the
- * printout stopped being the thing the user had arranged. One component means
- * what you place is literally what you print.
- */
 export default function WorkspaceView({
   calibration,
   layers,
@@ -129,9 +122,16 @@ export default function WorkspaceView({
         const color = layerColor(index);
         const selected = layer.id === selectedLayerId;
         const box = boxFor(layer.xCm, layer.yCm, widthCm, heightCm);
+        const shade = panelShadow(box.width, display, layer.content?.glowColor);
         return (
+          <Fragment key={layer.id}>
+            {/* Its own element, painted under the face: clip-path removes
+                everything above the top edge, and clipping the face itself
+                would take the picture with it. */}
+            {shade && (
+              <div className="layer-shade" style={{ ...box, boxShadow: shade }} aria-hidden="true" />
+            )}
           <div
-            key={layer.id}
             className={`layer ${selected ? "selected" : ""}`}
             style={{
               ...box,
@@ -140,7 +140,9 @@ export default function WorkspaceView({
               // is on or off.
               outline: display.showBorders ? `2px solid ${color}` : undefined,
               outlineOffset: -2,
-              boxShadow: panelShadow(box.width, display, selected, layer.content?.glowColor),
+              // The stylesheet keeps a selection ring for .layer.selected; it
+              // rides with the border toggle, so state it here either way.
+              boxShadow: selected && display.showBorders ? "0 0 0 2px rgba(255, 255, 255, 0.5)" : "none",
             }}
             onPointerDown={onLayerPointerDown ? (e) => onLayerPointerDown(e, layer) : undefined}
             onPointerMove={onPointerMove}
@@ -189,6 +191,7 @@ export default function WorkspaceView({
               />
             )}
           </div>
+          </Fragment>
         );
       })}
     </>

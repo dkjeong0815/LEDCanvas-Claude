@@ -45,9 +45,9 @@ export interface CompositeOptions {
 }
 
 /**
- * Lays the shadow and the light spill under a face, mirroring the CSS in
- * WorkspaceView — both scale with the face's drawn width so the PNG matches
- * the screen at any zoom.
+ * Lays the shading and the light spill under a face, mirroring the CSS in
+ * WorkspaceView — both scale with the face's drawn width, and both are clipped
+ * flush at the top edge so nothing spills above the panel.
  */
 function drawPanelShadow(
   ctx: CanvasRenderingContext2D,
@@ -58,27 +58,41 @@ function drawPanelShadow(
   display: DisplayOptions,
   glowColor?: string
 ) {
-  const passes: { color: string; blur: number; offsetY: number }[] = [];
+  const passes: { color: string; blur: number; spread: number; offsetY: number }[] = [];
+
   if (display.glow > 0 && glowColor) {
-    // Wide wash first, tight rim over it — the same two stages as the editor.
-    passes.push({ color: `rgba(${glowColor}, ${display.glow * 0.55})`, blur: w * 0.34, offsetY: 0 });
-    passes.push({ color: `rgba(${glowColor}, ${display.glow})`, blur: w * 0.10, offsetY: 0 });
+    // Wide wash first, tight rim over it, shading over both — furthest from
+    // the edge goes down first.
+    passes.push({ color: `rgba(${glowColor}, ${display.glow * 0.55})`, blur: w * 0.34, spread: w * 0.07, offsetY: 0 });
+    passes.push({ color: `rgba(${glowColor}, ${display.glow})`, blur: w * 0.1, spread: w * 0.025, offsetY: 0 });
   }
+
   if (display.shadow) {
-    passes.push({ color: "rgba(0, 0, 0, 0.42)", blur: w * 0.045, offsetY: w * 0.012 });
+    passes.push({ color: "rgba(0, 0, 0, 0.45)", blur: w * 0.07, spread: 0, offsetY: w * 0.025 });
+    passes.push({ color: "rgba(0, 0, 0, 0.75)", blur: w * 0.03, spread: 0, offsetY: w * 0.01 });
+    passes.push({ color: "rgba(0, 0, 0, 0.95)", blur: w * 0.012, spread: w * 0.004, offsetY: 0 });
   }
+
+  if (!passes.length) return;
+
+  ctx.save();
+  // Everything above the face's top edge is out of bounds, as in the editor.
+  ctx.beginPath();
+  ctx.rect(0, y, ctx.canvas.width, ctx.canvas.height - y);
+  ctx.clip();
 
   for (const pass of passes) {
     ctx.save();
     ctx.shadowColor = pass.color;
     ctx.shadowBlur = pass.blur;
     ctx.shadowOffsetY = pass.offsetY;
-    // The caster itself is covered by the content drawn next, so its colour
-    // only matters for the fraction of a pixel at the edge.
+    // The caster is covered by the content drawn next, so only the spread
+    // beyond the face's edge is ever seen.
     ctx.fillStyle = "#05070a";
-    ctx.fillRect(x, y, w, h);
+    ctx.fillRect(x - pass.spread, y - pass.spread, w + pass.spread * 2, h + pass.spread * 2);
     ctx.restore();
   }
+  ctx.restore();
 }
 
 /**
