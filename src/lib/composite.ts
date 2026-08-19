@@ -60,7 +60,9 @@ function drawPanelShadow(
 ) {
   const passes: { color: string; blur: number; offsetY: number }[] = [];
   if (display.glow > 0 && glowColor) {
-    passes.push({ color: `rgba(${glowColor}, ${display.glow})`, blur: w * 0.09, offsetY: 0 });
+    // Wide wash first, tight rim over it — the same two stages as the editor.
+    passes.push({ color: `rgba(${glowColor}, ${display.glow * 0.55})`, blur: w * 0.34, offsetY: 0 });
+    passes.push({ color: `rgba(${glowColor}, ${display.glow})`, blur: w * 0.10, offsetY: 0 });
   }
   if (display.shadow) {
     passes.push({ color: "rgba(0, 0, 0, 0.42)", blur: w * 0.045, offsetY: w * 0.012 });

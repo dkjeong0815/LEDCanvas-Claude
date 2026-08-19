@@ -111,12 +111,10 @@ export const DEFAULT_DISPLAY: DisplayOptions = {
   showBorders: true,
   showDims: true,
   shadow: true,
-  // Deliberately low. A lit face reads on a dim lobby photo and looks pasted
-  // on a bright office one, so the default errs towards the office.
-  glow: 0.2,
+  glow: 0.5,
 };
 
-export const MAX_GLOW = 0.6;
+export const MAX_GLOW = 1.2;
 
 const initialCalibrationState = {
   referenceKind: "a4" as ReferenceKind,

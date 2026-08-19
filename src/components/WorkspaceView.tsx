@@ -48,7 +48,13 @@ function panelShadow(
     parts.push(`0 ${widthPx * 0.012}px ${widthPx * 0.045}px rgba(0, 0, 0, 0.42)`);
   }
   if (display.glow > 0 && glowColor) {
-    parts.push(`0 0 ${widthPx * 0.09}px ${widthPx * 0.02}px rgba(${glowColor}, ${display.glow})`);
+    // Two stages, because that is how a lit screen actually throws light: a
+    // tight bright rim right at the edge, and a wide soft wash beyond it. One
+    // blur alone reads as a coloured border rather than as light.
+    parts.push(`0 0 ${widthPx * 0.10}px ${widthPx * 0.025}px rgba(${glowColor}, ${display.glow})`);
+    parts.push(
+      `0 0 ${widthPx * 0.34}px ${widthPx * 0.07}px rgba(${glowColor}, ${display.glow * 0.55})`
+    );
   }
   // "none" rather than undefined: the stylesheet still carries a selection
   // ring for .layer.selected, and letting it through would defeat the toggle.
