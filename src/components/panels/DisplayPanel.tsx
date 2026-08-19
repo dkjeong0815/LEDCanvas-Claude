@@ -81,7 +81,7 @@ export default function DisplayPanel() {
       <p className="muted small">이름·테두리·크기를 끄고 그림자를 켭니다.</p>
 
       {!display.showBorders && (
-        <p className="muted small">선택한 레이어의 테두리는 편집을 위해 계속 보입니다.</p>
+        <p className="muted small">테두리를 끄면 선택 표시도 사라집니다. 옮기거나 크기를 바꿀 때 다시 켜세요.</p>
       )}
     </section>
   );

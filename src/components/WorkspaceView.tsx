@@ -39,17 +39,20 @@ function panelShadow(
   glowColor?: string
 ) {
   const parts: string[] = [];
-  // An inline box-shadow replaces the stylesheet's selection ring rather than
-  // adding to it, so the ring has to be re-stated here or selecting a layer
-  // would stop showing.
-  if (selected) parts.push("0 0 0 2px rgba(255, 255, 255, 0.5)");
+  // The selection ring rides with the border toggle. With borders off the face
+  // is meant to look like a panel on a wall, and a white ring around it gives
+  // the game away just as much as the outline does — so editing aids come back
+  // together, by turning borders on.
+  if (selected && display.showBorders) parts.push("0 0 0 2px rgba(255, 255, 255, 0.5)");
   if (display.shadow) {
     parts.push(`0 ${widthPx * 0.012}px ${widthPx * 0.045}px rgba(0, 0, 0, 0.42)`);
   }
   if (display.glow > 0 && glowColor) {
     parts.push(`0 0 ${widthPx * 0.09}px ${widthPx * 0.02}px rgba(${glowColor}, ${display.glow})`);
   }
-  return parts.length ? parts.join(", ") : undefined;
+  // "none" rather than undefined: the stylesheet still carries a selection
+  // ring for .layer.selected, and letting it through would defeat the toggle.
+  return parts.length ? parts.join(", ") : "none";
 }
 
 /**
@@ -107,11 +110,13 @@ export default function WorkspaceView({
         style={{ left: offsetX, top: offsetY, width: imgWidth, height: imgHeight }}
         draggable={false}
       />
-      <div
-        className="wall-outline"
-        style={boxFor(bounds.xCm, bounds.yCm, bounds.widthCm, bounds.heightCm)}
-        aria-hidden="true"
-      />
+      {display.showBorders && (
+        <div
+          className="wall-outline"
+          style={boxFor(bounds.xCm, bounds.yCm, bounds.widthCm, bounds.heightCm)}
+          aria-hidden="true"
+        />
+      )}
 
       {layers.map((layer, index) => {
         const { widthCm, heightCm } = layerSizeCm(layer);
@@ -125,10 +130,8 @@ export default function WorkspaceView({
             style={{
               ...box,
               // The 2px border stays in the box model even when hidden, so the
-              // face keeps its exact size; only its colour goes away. The
-              // selected layer keeps its outline regardless — without it there
-              // is nothing to grab.
-              borderColor: display.showBorders || selected ? color : "transparent",
+              // face keeps its exact size; only its colour goes away.
+              borderColor: display.showBorders ? color : "transparent",
               boxShadow: panelShadow(box.width, display, selected, layer.content?.glowColor),
             }}
             onPointerDown={onLayerPointerDown ? (e) => onLayerPointerDown(e, layer) : undefined}
@@ -167,7 +170,7 @@ export default function WorkspaceView({
                 {widthCm.toFixed(0)} × {heightCm.toFixed(0)} cm
               </span>
             )}
-            {showHandles && (
+            {showHandles && display.showBorders && (
               <div
                 className="layer-handle"
                 style={{ background: color }}
