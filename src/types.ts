@@ -70,6 +70,12 @@ export interface LayerContent {
    * prints blank in some browsers, so paper always draws this instead.
    */
   posterUrl: string;
+  /**
+   * Luminance-weighted average colour of that still, as "r, g, b". A lit LED
+   * face spills its own colour onto the wall, and bright areas spill more —
+   * so the glow is sampled from the picture rather than picked by hand.
+   */
+  glowColor: string;
   fitMode: FitMode;
 }
 
@@ -85,4 +91,22 @@ export interface Layer {
   xCm: number;
   yCm: number;
   content?: LayerContent;
+}
+
+/**
+ * What the arrangement shows on top of the content. The editor, the printed
+ * sheet and the PNG all read the same options, so turning the labels off for a
+ * client means they are off everywhere.
+ */
+export interface DisplayOptions {
+  /** the layer name chip */
+  showLabels: boolean;
+  /** the coloured outline around each layer */
+  showBorders: boolean;
+  /** the real size caption in the corner */
+  showDims: boolean;
+  /** drop shadow, so a face reads as mounted off the wall */
+  shadow: boolean;
+  /** strength of the content-coloured light spill, 0 to 0.6 */
+  glow: number;
 }

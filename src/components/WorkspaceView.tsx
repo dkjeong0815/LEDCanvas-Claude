@@ -1,7 +1,7 @@
 import { wallBounds } from "../state/store";
 import { layerSizeCm } from "../lib/cabinets";
 import { layerColor } from "../lib/palette";
-import type { Calibration, Layer } from "../types";
+import type { Calibration, DisplayOptions, Layer } from "../types";
 
 export interface WorkspaceViewProps {
   calibration: Calibration;
@@ -22,6 +22,34 @@ export interface WorkspaceViewProps {
    * some browsers.
    */
   stillContent?: boolean;
+  /** annotations, shadow and glow — shared with the sheet and the PNG */
+  display: DisplayOptions;
+}
+
+/**
+ * Shadow and glow scale with the rendered width, never a fixed pixel figure.
+ * The same arrangement is drawn at editor zoom, at sheet size and at the
+ * photo's native resolution for the PNG; a constant blur would look right in
+ * exactly one of the three.
+ */
+function panelShadow(
+  widthPx: number,
+  display: DisplayOptions,
+  selected: boolean,
+  glowColor?: string
+) {
+  const parts: string[] = [];
+  // An inline box-shadow replaces the stylesheet's selection ring rather than
+  // adding to it, so the ring has to be re-stated here or selecting a layer
+  // would stop showing.
+  if (selected) parts.push("0 0 0 2px rgba(255, 255, 255, 0.5)");
+  if (display.shadow) {
+    parts.push(`0 ${widthPx * 0.012}px ${widthPx * 0.045}px rgba(0, 0, 0, 0.42)`);
+  }
+  if (display.glow > 0 && glowColor) {
+    parts.push(`0 0 ${widthPx * 0.09}px ${widthPx * 0.02}px rgba(${glowColor}, ${display.glow})`);
+  }
+  return parts.length ? parts.join(", ") : undefined;
 }
 
 /**
@@ -47,6 +75,7 @@ export default function WorkspaceView({
   onPointerUp,
   showHandles = false,
   stillContent = false,
+  display,
 }: WorkspaceViewProps) {
   const scale =
     frameWidth > 0 && frameHeight > 0
@@ -88,11 +117,20 @@ export default function WorkspaceView({
         const { widthCm, heightCm } = layerSizeCm(layer);
         const color = layerColor(index);
         const selected = layer.id === selectedLayerId;
+        const box = boxFor(layer.xCm, layer.yCm, widthCm, heightCm);
         return (
           <div
             key={layer.id}
             className={`layer ${selected ? "selected" : ""}`}
-            style={{ ...boxFor(layer.xCm, layer.yCm, widthCm, heightCm), borderColor: color }}
+            style={{
+              ...box,
+              // The 2px border stays in the box model even when hidden, so the
+              // face keeps its exact size; only its colour goes away. The
+              // selected layer keeps its outline regardless — without it there
+              // is nothing to grab.
+              borderColor: display.showBorders || selected ? color : "transparent",
+              boxShadow: panelShadow(box.width, display, selected, layer.content?.glowColor),
+            }}
             onPointerDown={onLayerPointerDown ? (e) => onLayerPointerDown(e, layer) : undefined}
             onPointerMove={onPointerMove}
             onPointerUp={onPointerUp}
@@ -119,12 +157,16 @@ export default function WorkspaceView({
                   playsInline
                 />
               ))}
-            <span className="layer-badge" style={{ background: color }}>
-              {layer.label}
-            </span>
-            <span className="layer-dims">
-              {widthCm.toFixed(0)} × {heightCm.toFixed(0)} cm
-            </span>
+            {display.showLabels && (
+              <span className="layer-badge" style={{ background: color }}>
+                {layer.label}
+              </span>
+            )}
+            {display.showDims && (
+              <span className="layer-dims">
+                {widthCm.toFixed(0)} × {heightCm.toFixed(0)} cm
+              </span>
+            )}
             {showHandles && (
               <div
                 className="layer-handle"

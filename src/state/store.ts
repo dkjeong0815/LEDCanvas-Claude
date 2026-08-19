@@ -3,6 +3,7 @@ import type {
   BackgroundImage,
   CabinetType,
   Calibration,
+  DisplayOptions,
   FitMode,
   Layer,
   Quad,
@@ -66,6 +67,11 @@ interface State {
   projectName: string;
   setProjectName: (name: string) => void;
 
+  display: DisplayOptions;
+  setDisplay: (patch: Partial<DisplayOptions>) => void;
+  /** strip every annotation and light the faces — the view a client sees */
+  presentationMode: () => void;
+
   reset: () => void;
   setBackground: (img: BackgroundImage) => void;
   setReferenceKind: (kind: ReferenceKind) => void;
@@ -87,12 +93,30 @@ interface State {
   nudgeRows: (id: string, delta: number) => boolean;
   setLayerCabinetType: (id: string, type: CabinetType) => boolean;
   setLayerPitch: (id: string, mm: number | undefined) => void;
-  setLayerContent: (id: string, url: string, posterUrl: string, fitMode: FitMode) => void;
+  setLayerContent: (
+    id: string,
+    url: string,
+    posterUrl: string,
+    glowColor: string,
+    fitMode: FitMode
+  ) => void;
   setLayerFitMode: (id: string, fitMode: FitMode) => void;
   clearLayerContent: (id: string) => void;
   setDefaultPitch: (mm: number) => void;
   setDefaultCabinetType: (t: CabinetType) => void;
 }
+
+export const DEFAULT_DISPLAY: DisplayOptions = {
+  showLabels: true,
+  showBorders: true,
+  showDims: true,
+  shadow: true,
+  // Deliberately low. A lit face reads on a dim lobby photo and looks pasted
+  // on a bright office one, so the default errs towards the office.
+  glow: 0.2,
+};
+
+export const MAX_GLOW = 0.6;
 
 const initialCalibrationState = {
   referenceKind: "a4" as ReferenceKind,
@@ -287,12 +311,12 @@ export const useStore = create<State>((set, get) => ({
   setLayerPitch: (id, mm) =>
     set((s) => ({ layers: s.layers.map((l) => (l.id === id ? { ...l, pixelPitchMm: mm } : l)) })),
 
-  setLayerContent: (id, url, posterUrl, fitMode) =>
+  setLayerContent: (id, url, posterUrl, glowColor, fitMode) =>
     set((s) => ({
       layers: s.layers.map((l) => {
         if (l.id !== id) return l;
         revokeContent(l);
-        return { ...l, content: { url, posterUrl, fitMode } };
+        return { ...l, content: { url, posterUrl, glowColor, fitMode } };
       }),
     })),
 
@@ -308,6 +332,15 @@ export const useStore = create<State>((set, get) => ({
         revokeContent(l);
         return { ...l, content: undefined };
       }),
+    })),
+
+  display: DEFAULT_DISPLAY,
+
+  setDisplay: (patch) => set((s) => ({ display: { ...s.display, ...patch } })),
+
+  presentationMode: () =>
+    set((s) => ({
+      display: { ...s.display, showLabels: false, showBorders: false, showDims: false, shadow: true },
     })),
 
   setDefaultPitch: (mm) => set({ defaultPitchMm: mm }),

@@ -1,4 +1,4 @@
-import type { Calibration, Layer, Point } from "../types";
+import type { Calibration, DisplayOptions, Layer, Point } from "../types";
 import { layerSizeCm } from "./cabinets";
 import { layerColor } from "./palette";
 
@@ -40,8 +40,43 @@ function drawFitted(
 export interface CompositeOptions {
   /** draw the per-cabinet grid inside each layer */
   showCabinetGrid?: boolean;
-  /** draw the layer label chip and its real size, as the editor does */
-  showLabels?: boolean;
+  /** annotations, shadow and glow — the same options the editor renders with */
+  display: DisplayOptions;
+}
+
+/**
+ * Lays the shadow and the light spill under a face, mirroring the CSS in
+ * WorkspaceView — both scale with the face's drawn width so the PNG matches
+ * the screen at any zoom.
+ */
+function drawPanelShadow(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  w: number,
+  h: number,
+  display: DisplayOptions,
+  glowColor?: string
+) {
+  const passes: { color: string; blur: number; offsetY: number }[] = [];
+  if (display.glow > 0 && glowColor) {
+    passes.push({ color: `rgba(${glowColor}, ${display.glow})`, blur: w * 0.09, offsetY: 0 });
+  }
+  if (display.shadow) {
+    passes.push({ color: "rgba(0, 0, 0, 0.42)", blur: w * 0.045, offsetY: w * 0.012 });
+  }
+
+  for (const pass of passes) {
+    ctx.save();
+    ctx.shadowColor = pass.color;
+    ctx.shadowBlur = pass.blur;
+    ctx.shadowOffsetY = pass.offsetY;
+    // The caster itself is covered by the content drawn next, so its colour
+    // only matters for the fraction of a pixel at the edge.
+    ctx.fillStyle = "#05070a";
+    ctx.fillRect(x, y, w, h);
+    ctx.restore();
+  }
 }
 
 /**
@@ -50,8 +85,8 @@ export interface CompositeOptions {
  */
 function drawLayerAnnotations(
   ctx: CanvasRenderingContext2D,
-  label: string,
-  sizeText: string,
+  label: string | null,
+  sizeText: string | null,
   color: string,
   topLeft: Point,
   bottomRight: Point,
@@ -62,12 +97,19 @@ function drawLayerAnnotations(
   ctx.textBaseline = "middle";
 
   const padding = fontPx * 0.42;
-  const chipHeight = fontPx * 1.5;
-  const chipWidth = ctx.measureText(label).width + padding * 2;
-  ctx.fillStyle = color;
-  ctx.fillRect(topLeft.x, topLeft.y, chipWidth, chipHeight);
-  ctx.fillStyle = "#0b1220";
-  ctx.fillText(label, topLeft.x + padding, topLeft.y + chipHeight / 2);
+  if (label !== null) {
+    const chipHeight = fontPx * 1.5;
+    const chipWidth = ctx.measureText(label).width + padding * 2;
+    ctx.fillStyle = color;
+    ctx.fillRect(topLeft.x, topLeft.y, chipWidth, chipHeight);
+    ctx.fillStyle = "#0b1220";
+    ctx.fillText(label, topLeft.x + padding, topLeft.y + chipHeight / 2);
+  }
+
+  if (sizeText === null) {
+    ctx.restore();
+    return;
+  }
 
   ctx.font = `500 ${fontPx * 0.82}px system-ui, sans-serif`;
   ctx.textAlign = "right";
@@ -93,7 +135,7 @@ function drawLayerAnnotations(
 export async function renderComposite(
   calibration: Calibration,
   layers: Layer[],
-  opts: CompositeOptions = {}
+  opts: CompositeOptions
 ): Promise<HTMLCanvasElement> {
   const canvas = document.createElement("canvas");
   canvas.width = calibration.rectWidthPx;
@@ -113,6 +155,8 @@ export async function renderComposite(
     const y = toPx(layer.yCm - calibration.originCm.y);
     const w = toPx(widthCm);
     const h = toPx(heightCm);
+
+    drawPanelShadow(ctx, x, y, w, h, opts.display, layer.content?.glowColor);
 
     if (layer.content) {
       try {
@@ -147,15 +191,17 @@ export async function renderComposite(
       ctx.restore();
     }
 
-    ctx.strokeStyle = color;
-    ctx.lineWidth = Math.max(1.5, calibration.pxPerCm * 0.14);
-    ctx.strokeRect(x, y, w, h);
+    if (opts.display.showBorders) {
+      ctx.strokeStyle = color;
+      ctx.lineWidth = Math.max(1.5, calibration.pxPerCm * 0.14);
+      ctx.strokeRect(x, y, w, h);
+    }
 
-    if (opts.showLabels) {
+    if (opts.display.showLabels || opts.display.showDims) {
       drawLayerAnnotations(
         ctx,
-        layer.label,
-        `${widthCm.toFixed(0)} × ${heightCm.toFixed(0)} cm`,
+        opts.display.showLabels ? layer.label : null,
+        opts.display.showDims ? `${widthCm.toFixed(0)} × ${heightCm.toFixed(0)} cm` : null,
         color,
         { x, y },
         { x: x + w, y: y + h },
@@ -170,7 +216,7 @@ export async function renderComposite(
 export async function compositeDataUrl(
   calibration: Calibration,
   layers: Layer[],
-  opts?: CompositeOptions
+  opts: CompositeOptions
 ): Promise<string> {
   const canvas = await renderComposite(calibration, layers, opts);
   return canvas.toDataURL("image/png");

@@ -13,6 +13,34 @@ export interface VideoPoster {
   url: string;
   widthPx: number;
   heightPx: number;
+  /** luminance-weighted average colour of the frame, as "r, g, b" */
+  glowColor: string;
+}
+
+/**
+ * The colour a lit panel would throw onto the wall.
+ *
+ * A plain average washes out to grey, because dark pixels drag every hue
+ * towards the middle. Real light does not work that way — the bright parts of
+ * a picture are what actually spill — so each pixel is weighted by its own
+ * luminance.
+ */
+function averageGlowColor(ctx: CanvasRenderingContext2D, w: number, h: number): string {
+  const { data } = ctx.getImageData(0, 0, w, h);
+  let r = 0;
+  let g = 0;
+  let b = 0;
+  let weight = 0;
+  // Every 4th pixel is plenty for an average and keeps large frames quick.
+  for (let i = 0; i < data.length; i += 16) {
+    const luma = (data[i] * 0.2126 + data[i + 1] * 0.7152 + data[i + 2] * 0.0722) / 255;
+    r += data[i] * luma;
+    g += data[i + 1] * luma;
+    b += data[i + 2] * luma;
+    weight += luma;
+  }
+  if (weight === 0) return "255, 255, 255";
+  return `${Math.round(r / weight)}, ${Math.round(g / weight)}, ${Math.round(b / weight)}`;
 }
 
 const CAPTURE_TIMEOUT_MS = 15000;
@@ -57,6 +85,7 @@ export function captureFirstFrame(videoUrl: string): Promise<VideoPoster> {
       const ctx = canvas.getContext("2d");
       if (!ctx) return fail("캔버스를 만들지 못했습니다.");
       ctx.drawImage(video, 0, 0);
+      const glowColor = averageGlowColor(ctx, widthPx, heightPx);
 
       canvas.toBlob(
         (blob) => {
@@ -64,7 +93,7 @@ export function captureFirstFrame(videoUrl: string): Promise<VideoPoster> {
           if (!blob) return fail("첫 프레임을 저장하지 못했습니다.");
           settled = true;
           cleanup();
-          resolve({ url: URL.createObjectURL(blob), widthPx, heightPx });
+          resolve({ url: URL.createObjectURL(blob), widthPx, heightPx, glowColor });
         },
         "image/jpeg",
         0.92

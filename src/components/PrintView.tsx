@@ -27,6 +27,7 @@ export default function PrintView({ onClose }: { onClose: () => void }) {
   const layers = useStore((s) => s.layers);
   const defaultPitchMm = useStore((s) => s.defaultPitchMm);
   const projectName = useStore((s) => s.projectName);
+  const display = useStore((s) => s.display);
   const setProjectName = useStore((s) => s.setProjectName);
 
   // Only the PNG download needs a bitmap; the sheet itself renders live.
@@ -37,7 +38,7 @@ export default function PrintView({ onClose }: { onClose: () => void }) {
     let cancelled = false;
     (async () => {
       try {
-        const url = await compositeDataUrl(calibration, layers, { showLabels: true });
+        const url = await compositeDataUrl(calibration, layers, { display });
         if (!cancelled) setPngUrl(url);
       } catch {
         if (!cancelled) setPngUrl(null);
@@ -46,7 +47,7 @@ export default function PrintView({ onClose }: { onClose: () => void }) {
     return () => {
       cancelled = true;
     };
-  }, [calibration, background, layers]);
+  }, [calibration, background, layers, display]);
 
   const today = useMemo(
     () =>
@@ -196,6 +197,7 @@ export default function PrintView({ onClose }: { onClose: () => void }) {
               layers={layers}
               frameWidth={viewWidthPx}
               frameHeight={viewHeightPx}
+              display={display}
               stillContent
             />
           </div>

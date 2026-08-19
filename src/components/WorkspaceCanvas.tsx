@@ -19,6 +19,7 @@ export default function WorkspaceCanvas() {
   const calibration = useStore((s) => s.calibration);
   const layers = useStore((s) => s.layers);
   const selectedLayerId = useStore((s) => s.selectedLayerId);
+  const display = useStore((s) => s.display);
   const selectLayer = useStore((s) => s.selectLayer);
   const moveLayer = useStore((s) => s.moveLayer);
   const setLayerGrid = useStore((s) => s.setLayerGrid);
@@ -95,6 +96,7 @@ export default function WorkspaceCanvas() {
         frameWidth={frame.width}
         frameHeight={frame.height}
         selectedLayerId={selectedLayerId}
+        display={display}
         onLayerPointerDown={(e, layer) => beginDrag(e, layer, "move")}
         onHandlePointerDown={(e, layer) => beginDrag(e, layer, "resize")}
         onPointerMove={onDragMove}

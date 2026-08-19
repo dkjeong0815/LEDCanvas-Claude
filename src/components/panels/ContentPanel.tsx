@@ -22,7 +22,7 @@ export default function ContentPanel() {
       // The still has to exist before the layer does: a layer whose content
       // cannot be printed is worse than a layer with no content at all.
       const poster = await captureFirstFrame(url);
-      setLayerContent(layerId, url, poster.url, fitMode);
+      setLayerContent(layerId, url, poster.url, poster.glowColor, fitMode);
     } catch (e) {
       URL.revokeObjectURL(url);
       setError(e instanceof Error ? e.message : "동영상을 불러오지 못했습니다.");
