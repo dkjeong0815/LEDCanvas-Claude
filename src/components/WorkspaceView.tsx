@@ -16,11 +16,18 @@ export interface WorkspaceViewProps {
   onPointerMove?: (e: React.PointerEvent) => void;
   onPointerUp?: (e: React.PointerEvent) => void;
   showHandles?: boolean;
+  /**
+   * Draw each layer's captured still instead of the playing video. The printed
+   * sheet sets this: paper holds one frame, and a live <video> prints blank in
+   * some browsers.
+   */
+  stillContent?: boolean;
 }
 
 /**
  * The arrangement itself: rectified wall, layers where the user put them, each
- * layer's content image inside it.
+ * layer's content inside it — the video plays in the editor, and the still
+ * captured from it stands in on paper.
  *
  * The editor and the printed sheet both render through here, on purpose. When
  * printing re-drew the same scene with its own canvas code, the two drifted —
@@ -39,6 +46,7 @@ export default function WorkspaceView({
   onPointerMove,
   onPointerUp,
   showHandles = false,
+  stillContent = false,
 }: WorkspaceViewProps) {
   const scale =
     frameWidth > 0 && frameHeight > 0
@@ -90,15 +98,27 @@ export default function WorkspaceView({
             onPointerUp={onPointerUp}
             onPointerCancel={onPointerUp}
           >
-            {layer.content && (
-              <img
-                className="layer-content"
-                src={layer.content.url}
-                alt=""
-                style={{ objectFit: layer.content.fitMode }}
-                draggable={false}
-              />
-            )}
+            {layer.content &&
+              (stillContent ? (
+                <img
+                  className="layer-content"
+                  src={layer.content.posterUrl}
+                  alt=""
+                  style={{ objectFit: layer.content.fitMode }}
+                  draggable={false}
+                />
+              ) : (
+                <video
+                  className="layer-content"
+                  src={layer.content.url}
+                  poster={layer.content.posterUrl}
+                  style={{ objectFit: layer.content.fitMode }}
+                  autoPlay
+                  loop
+                  muted
+                  playsInline
+                />
+              ))}
             <span className="layer-badge" style={{ background: color }}>
               {layer.label}
             </span>

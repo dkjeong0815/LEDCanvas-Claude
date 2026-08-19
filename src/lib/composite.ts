@@ -116,7 +116,8 @@ export async function renderComposite(
 
     if (layer.content) {
       try {
-        const img = await loadImage(layer.content.url);
+        // The still, not the video: a PNG is one frame, same as the sheet.
+        const img = await loadImage(layer.content.posterUrl);
         drawFitted(ctx, img, x, y, w, h, layer.content.fitMode);
       } catch {
         ctx.fillStyle = "#05070a";

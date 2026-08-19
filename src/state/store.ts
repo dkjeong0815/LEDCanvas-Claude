@@ -35,6 +35,12 @@ function revoke(url: string | undefined | null) {
   if (url && url.startsWith("blob:")) URL.revokeObjectURL(url);
 }
 
+/** A layer's content owns two blobs: the video and the still captured from it. */
+function revokeContent(layer: Layer) {
+  revoke(layer.content?.url);
+  revoke(layer.content?.posterUrl);
+}
+
 interface State {
   step: Step;
   background: BackgroundImage | null;
@@ -81,7 +87,7 @@ interface State {
   nudgeRows: (id: string, delta: number) => boolean;
   setLayerCabinetType: (id: string, type: CabinetType) => boolean;
   setLayerPitch: (id: string, mm: number | undefined) => void;
-  setLayerContent: (id: string, url: string, fitMode: FitMode) => void;
+  setLayerContent: (id: string, url: string, posterUrl: string, fitMode: FitMode) => void;
   setLayerFitMode: (id: string, fitMode: FitMode) => void;
   clearLayerContent: (id: string) => void;
   setDefaultPitch: (mm: number) => void;
@@ -115,7 +121,7 @@ export const useStore = create<State>((set, get) => ({
   reset: () => {
     const s = get();
     revoke(s.background?.url);
-    s.layers.forEach((l) => revoke(l.content?.url));
+    s.layers.forEach(revokeContent);
     set({
       step: "upload",
       background: null,
@@ -129,7 +135,7 @@ export const useStore = create<State>((set, get) => ({
   setBackground: (img) => {
     const s = get();
     revoke(s.background?.url);
-    s.layers.forEach((l) => revoke(l.content?.url));
+    s.layers.forEach(revokeContent);
     set({
       background: img,
       step: "calibrate",
@@ -212,7 +218,8 @@ export const useStore = create<State>((set, get) => ({
 
   removeLayer: (id) =>
     set((s) => {
-      revoke(s.layers.find((l) => l.id === id)?.content?.url);
+      const removed = s.layers.find((l) => l.id === id);
+      if (removed) revokeContent(removed);
       return {
         layers: s.layers.filter((l) => l.id !== id),
         selectedLayerId: s.selectedLayerId === id ? null : s.selectedLayerId,
@@ -280,12 +287,12 @@ export const useStore = create<State>((set, get) => ({
   setLayerPitch: (id, mm) =>
     set((s) => ({ layers: s.layers.map((l) => (l.id === id ? { ...l, pixelPitchMm: mm } : l)) })),
 
-  setLayerContent: (id, url, fitMode) =>
+  setLayerContent: (id, url, posterUrl, fitMode) =>
     set((s) => ({
       layers: s.layers.map((l) => {
         if (l.id !== id) return l;
-        revoke(l.content?.url);
-        return { ...l, content: { url, fitMode } };
+        revokeContent(l);
+        return { ...l, content: { url, posterUrl, fitMode } };
       }),
     })),
 
@@ -298,7 +305,7 @@ export const useStore = create<State>((set, get) => ({
     set((s) => ({
       layers: s.layers.map((l) => {
         if (l.id !== id) return l;
-        revoke(l.content?.url);
+        revokeContent(l);
         return { ...l, content: undefined };
       }),
     })),

@@ -62,7 +62,14 @@ export interface CabinetSpec {
 export type FitMode = "cover" | "contain";
 
 export interface LayerContent {
+  /** object URL of the user's video; owned by the store, revoked on replace */
   url: string;
+  /**
+   * A still frame of that video, captured once on upload. Paper output — the
+   * printed sheet and the PNG — can only carry one frame, and a live <video>
+   * prints blank in some browsers, so paper always draws this instead.
+   */
+  posterUrl: string;
   fitMode: FitMode;
 }
 

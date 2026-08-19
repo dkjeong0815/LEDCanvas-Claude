@@ -196,6 +196,7 @@ export default function PrintView({ onClose }: { onClose: () => void }) {
               layers={layers}
               frameWidth={viewWidthPx}
               frameHeight={viewHeightPx}
+              stillContent
             />
           </div>
           <SpecTable />
