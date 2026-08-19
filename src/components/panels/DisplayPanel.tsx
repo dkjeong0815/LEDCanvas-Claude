@@ -1,4 +1,4 @@
-import { MAX_GLOW, MAX_SHADOW_BLUR, useStore } from "../../state/store";
+import { MAX_GLOW, MAX_SHADOW_BLUR, MAX_SHADOW_STRENGTH, useStore } from "../../state/store";
 
 /**
  * What the arrangement shows on top of the content. These options travel to
@@ -58,6 +58,23 @@ export default function DisplayPanel() {
           그림자
         </label>
       </div>
+
+      {display.shadow && (
+        <label className="slider-row">
+          <span>
+            그림자 농도
+            <em>{display.shadowStrength.toFixed(1)}×</em>
+          </span>
+          <input
+            type="range"
+            min={0}
+            max={MAX_SHADOW_STRENGTH}
+            step={0.1}
+            value={display.shadowStrength}
+            onChange={(e) => setDisplay({ shadowStrength: Number(e.target.value) })}
+          />
+        </label>
+      )}
 
       {display.shadow && (
         <label className="slider-row">

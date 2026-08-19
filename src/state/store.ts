@@ -112,12 +112,16 @@ export const DEFAULT_DISPLAY: DisplayOptions = {
   showDims: true,
   shadow: true,
   shadowBlur: 1,
+  // Deliberately under 1. A heavy edge on a light wall stops reading as shade
+  // and starts reading as a black frame around the picture.
+  shadowStrength: 0.7,
   glow: 0.5,
   surface: true,
 };
 
 export const MAX_GLOW = 1.2;
 export const MAX_SHADOW_BLUR = 3;
+export const MAX_SHADOW_STRENGTH = 2.5;
 
 const initialCalibrationState = {
   referenceKind: "a4" as ReferenceKind,

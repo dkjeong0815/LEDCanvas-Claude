@@ -520,6 +520,13 @@ input[type="number"] {
   pointer-events: none;
 }
 
+.layer-glow {
+  position: absolute;
+  pointer-events: none;
+  /* Light adds to what is behind it rather than covering it. */
+  mix-blend-mode: screen;
+}
+
 .layer {
   position: absolute;
   /* The outline is drawn by WorkspaceView, not a border: a border sits in the

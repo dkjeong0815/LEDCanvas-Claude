@@ -38,33 +38,37 @@ export interface WorkspaceViewProps {
  * are offset downwards, which leaves the top lighter than the bottom without
  * ever leaving it bare.
  */
-function panelShadow(widthPx: number, display: DisplayOptions, glowColor?: string) {
-  const parts: string[] = [];
+function panelShadow(widthPx: number, display: DisplayOptions) {
+  if (!display.shadow) return undefined;
 
-  if (display.shadow) {
-    // Three stages from the edge outwards. The first hugs the edge and is
-    // nearly opaque black — that contact line is what makes a panel look like
-    // it is standing off the wall rather than printed on it. Only the blur
-    // takes the slider: the offsets place the shadow and the spread sets how
-    // far the black reaches, and softening should not move either.
-    const b = widthPx * display.shadowBlur;
-    parts.push(`0 0 ${b * 0.012}px ${widthPx * 0.004}px rgba(0, 0, 0, 0.95)`);
-    parts.push(`0 ${widthPx * 0.010}px ${b * 0.030}px rgba(0, 0, 0, 0.75)`);
-    parts.push(`0 ${widthPx * 0.025}px ${b * 0.070}px rgba(0, 0, 0, 0.45)`);
-  }
+  const b = widthPx * display.shadowBlur;
+  const a = (base: number) => Math.min(1, base * display.shadowStrength).toFixed(3);
+  // No spread on the contact stage. Spread widens the darkest pixels into a
+  // band of even thickness all the way round, which is exactly what a frame
+  // looks like; blur alone falls off from the edge, which is what shade does.
+  return [
+    `0 0 ${b * 0.010}px rgba(0, 0, 0, ${a(0.5)})`,
+    `0 ${widthPx * 0.008}px ${b * 0.028}px rgba(0, 0, 0, ${a(0.3)})`,
+    `0 ${widthPx * 0.022}px ${b * 0.065}px rgba(0, 0, 0, ${a(0.2)})`,
+  ].join(", ");
+}
 
-  if (display.glow > 0 && glowColor) {
-    // Behind the shading, so the edge stays dark and the light shows further
-    // out. Two stages, because that is how a lit screen throws light: a tight
-    // bright rim and a wide soft wash. One blur alone reads as a coloured
-    // border rather than as light.
-    parts.push(`0 0 ${widthPx * 0.10}px ${widthPx * 0.025}px rgba(${glowColor}, ${display.glow})`);
-    parts.push(
-      `0 0 ${widthPx * 0.34}px ${widthPx * 0.07}px rgba(${glowColor}, ${display.glow * 0.55})`
-    );
-  }
+/**
+ * The light the face throws onto the wall. Two stages, because that is how a
+ * lit screen spills: a tight bright rim and a wide soft wash — one blur alone
+ * reads as a coloured border rather than as light.
+ *
+ * It is screen-blended, not painted over. Light adds; a translucent colour laid
+ * on top does not. Teal spill over a pale wall was coming out darker than the
+ * bare wall, which is the opposite of what a lit panel does.
+ */
+function panelGlow(widthPx: number, display: DisplayOptions, glowColor?: string) {
+  if (!(display.glow > 0) || !glowColor) return undefined;
 
-  return parts.length ? parts.join(", ") : undefined;
+  return [
+    `0 0 ${widthPx * 0.10}px ${widthPx * 0.025}px rgba(${glowColor}, ${display.glow})`,
+    `0 0 ${widthPx * 0.34}px ${widthPx * 0.07}px rgba(${glowColor}, ${display.glow * 0.55})`,
+  ].join(", ");
 }
 
 /**
@@ -147,11 +151,16 @@ export default function WorkspaceView({
         const color = layerColor(index);
         const selected = layer.id === selectedLayerId;
         const box = boxFor(layer.xCm, layer.yCm, widthCm, heightCm);
-        const shade = panelShadow(box.width, display, layer.content?.glowColor);
+        const shade = panelShadow(box.width, display);
+        const glow = panelGlow(box.width, display, layer.content?.glowColor);
         return (
           <Fragment key={layer.id}>
-            {/* Its own element, painted under the face — the face itself
-                cannot carry it without the picture covering it. */}
+            {/* Both ride on their own elements under the face — the face
+                itself cannot carry them without the picture covering them,
+                and the light has to blend differently from the shade. */}
+            {glow && (
+              <div className="layer-glow" style={{ ...box, boxShadow: glow }} aria-hidden="true" />
+            )}
             {shade && (
               <div className="layer-shade" style={{ ...box, boxShadow: shade }} aria-hidden="true" />
             )}

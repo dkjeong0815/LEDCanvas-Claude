@@ -58,33 +58,46 @@ function drawPanelShadow(
   display: DisplayOptions,
   glowColor?: string
 ) {
-  const passes: { color: string; blur: number; spread: number; offsetY: number }[] = [];
+  type Pass = { color: string; blur: number; spread: number; offsetY: number; screen?: boolean };
+  const passes: Pass[] = [];
 
   if (display.glow > 0 && glowColor) {
-    // Wide wash first, tight rim over it, shading over both — furthest from
-    // the edge goes down first.
-    passes.push({ color: `rgba(${glowColor}, ${display.glow * 0.55})`, blur: w * 0.34, spread: w * 0.07, offsetY: 0 });
-    passes.push({ color: `rgba(${glowColor}, ${display.glow})`, blur: w * 0.1, spread: w * 0.025, offsetY: 0 });
+    // Screen-blended, matching the editor: light adds to the wall rather than
+    // covering it. Wide wash first, tight rim over it.
+    passes.push({ color: `rgba(${glowColor}, ${display.glow * 0.55})`, blur: w * 0.34, spread: w * 0.07, offsetY: 0, screen: true });
+    passes.push({ color: `rgba(${glowColor}, ${display.glow})`, blur: w * 0.1, spread: w * 0.025, offsetY: 0, screen: true });
   }
 
   if (display.shadow) {
     const b = w * display.shadowBlur;
-    passes.push({ color: "rgba(0, 0, 0, 0.45)", blur: b * 0.07, spread: 0, offsetY: w * 0.025 });
-    passes.push({ color: "rgba(0, 0, 0, 0.75)", blur: b * 0.03, spread: 0, offsetY: w * 0.01 });
-    passes.push({ color: "rgba(0, 0, 0, 0.95)", blur: b * 0.012, spread: w * 0.004, offsetY: 0 });
+    const a = (base: number) => Math.min(1, base * display.shadowStrength);
+    passes.push({ color: `rgba(0, 0, 0, ${a(0.2)})`, blur: b * 0.065, spread: 0, offsetY: w * 0.022 });
+    passes.push({ color: `rgba(0, 0, 0, ${a(0.3)})`, blur: b * 0.028, spread: 0, offsetY: w * 0.008 });
+    passes.push({ color: `rgba(0, 0, 0, ${a(0.5)})`, blur: b * 0.01, spread: 0, offsetY: 0 });
   }
 
   if (!passes.length) return;
+
+  // The caster is parked far off-canvas and the shadow is offset back onto the
+  // face, so the rectangle itself is never painted. Filling it in place would
+  // lay an opaque block wherever the spread grows it — a hard black band around
+  // the face rather than shade falling away from it.
+  const PARK = 1e5;
 
   for (const pass of passes) {
     ctx.save();
     ctx.shadowColor = pass.color;
     ctx.shadowBlur = pass.blur;
+    ctx.shadowOffsetX = -PARK;
     ctx.shadowOffsetY = pass.offsetY;
-    // The caster is covered by the content drawn next, so only the spread
-    // beyond the face's edge is ever seen.
-    ctx.fillStyle = "#05070a";
-    ctx.fillRect(x - pass.spread, y - pass.spread, w + pass.spread * 2, h + pass.spread * 2);
+    if (pass.screen) ctx.globalCompositeOperation = "screen";
+    ctx.fillStyle = "#000";
+    ctx.fillRect(
+      x - pass.spread + PARK,
+      y - pass.spread,
+      w + pass.spread * 2,
+      h + pass.spread * 2
+    );
     ctx.restore();
   }
 }

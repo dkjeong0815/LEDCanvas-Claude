@@ -113,6 +113,12 @@ export interface DisplayOptions {
    * or lit by a broader source.
    */
   shadowBlur: number;
+  /**
+   * Multiplies the shadow's darkness. Kept low by default: on a light wall a
+   * heavy edge stops reading as shade and starts reading as a black frame
+   * around the picture.
+   */
+  shadowStrength: number;
   /** strength of the content-coloured light spill */
   glow: number;
   /**
