@@ -68,6 +68,29 @@ function panelShadow(widthPx: number, display: DisplayOptions, glowColor?: strin
   return parts.length ? parts.join(", ") : undefined;
 }
 
+/**
+ * The face's own surface, laid over the picture rather than behind it: a thin
+ * bright line where the bezel catches the light, and a short dark fall from
+ * the inner top edge. Both are what separate "a thing hanging on the wall"
+ * from "a picture pasted into the wall".
+ *
+ * It rides on its own element because an inset shadow on the layer would be
+ * painted underneath the video, not over it.
+ */
+function faceSurface(widthPx: number) {
+  const bezel = Math.max(1, widthPx * 0.0016);
+  const fall = widthPx * 0.03;
+  return {
+    // The bezel is lit metal; the shading is the recessed glass behind it. So
+    // the shading starts inside the bezel — padding plus content-box clipping
+    // keeps it off the bright line, which would otherwise go grey at the top.
+    padding: bezel,
+    backgroundImage: `linear-gradient(to bottom, rgba(0, 0, 0, 0.55), rgba(0, 0, 0, 0) ${fall}px)`,
+    backgroundClip: "content-box" as const,
+    boxShadow: `inset 0 0 0 ${bezel}px rgba(255, 255, 255, 0.35)`,
+  };
+}
+
 export default function WorkspaceView({
   calibration,
   layers,
@@ -173,6 +196,13 @@ export default function WorkspaceView({
                   playsInline
                 />
               ))}
+            {display.surface && (
+              <div
+                className="layer-face"
+                style={faceSurface(box.width)}
+                aria-hidden="true"
+              />
+            )}
             {display.showLabels && (
               <span className="layer-badge" style={{ background: color }}>
                 {layer.label}

@@ -113,6 +113,7 @@ export const DEFAULT_DISPLAY: DisplayOptions = {
   shadow: true,
   shadowBlur: 1,
   glow: 0.5,
+  surface: true,
 };
 
 export const MAX_GLOW = 1.2;

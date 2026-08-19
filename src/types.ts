@@ -113,6 +113,11 @@ export interface DisplayOptions {
    * or lit by a broader source.
    */
   shadowBlur: number;
-  /** strength of the content-coloured light spill, 0 to 0.6 */
+  /** strength of the content-coloured light spill */
   glow: number;
+  /**
+   * Bezel highlight and inner top shading. Without them the content sits flat
+   * in the wall; with them the face reads as a thing with a glass surface.
+   */
+  surface: boolean;
 }

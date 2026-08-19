@@ -547,6 +547,12 @@ input[type="number"] {
   pointer-events: none;
 }
 
+.layer-face {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
 .layer-badge {
   position: absolute;
   left: 0;

@@ -44,6 +44,14 @@ export default function DisplayPanel() {
         <label>
           <input
             type="checkbox"
+            checked={display.surface}
+            onChange={(e) => setDisplay({ surface: e.target.checked })}
+          />
+          패널 표면감
+        </label>
+        <label>
+          <input
+            type="checkbox"
             checked={display.shadow}
             onChange={(e) => setDisplay({ shadow: e.target.checked })}
           />

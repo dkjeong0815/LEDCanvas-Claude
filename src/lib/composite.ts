@@ -97,6 +97,37 @@ function drawPanelShadow(
 }
 
 /**
+ * The face's own surface — bezel highlight and inner top shading — mirroring
+ * faceSurface() in WorkspaceView. Drawn over the content, never behind it.
+ */
+function drawFaceSurface(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  w: number,
+  h: number
+) {
+  const bezel = Math.max(1, w * 0.0016);
+  const fall = Math.min(w * 0.03, h * 0.5);
+  ctx.save();
+  ctx.beginPath();
+  ctx.rect(x, y, w, h);
+  ctx.clip();
+
+  // Inside the bezel, so the bright line keeps its brightness at the top.
+  const shade = ctx.createLinearGradient(0, y + bezel, 0, y + bezel + fall);
+  shade.addColorStop(0, "rgba(0, 0, 0, 0.55)");
+  shade.addColorStop(1, "rgba(0, 0, 0, 0)");
+  ctx.fillStyle = shade;
+  ctx.fillRect(x + bezel, y + bezel, w - bezel * 2, fall);
+
+  ctx.strokeStyle = "rgba(255, 255, 255, 0.35)";
+  ctx.lineWidth = bezel;
+  ctx.strokeRect(x + bezel / 2, y + bezel / 2, w - bezel, h - bezel);
+  ctx.restore();
+}
+
+/**
  * Draws the label chip and size caption exactly the way the editor overlays
  * them, so a printed sheet reads as the same picture the user arranged.
  */
@@ -207,6 +238,8 @@ export async function renderComposite(
       ctx.stroke();
       ctx.restore();
     }
+
+    if (opts.display.surface) drawFaceSurface(ctx, x, y, w, h);
 
     if (opts.display.showBorders) {
       ctx.strokeStyle = color;
