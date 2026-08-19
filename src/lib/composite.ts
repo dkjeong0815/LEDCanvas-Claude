@@ -46,8 +46,8 @@ export interface CompositeOptions {
 
 /**
  * Lays the shading and the light spill under a face, mirroring the CSS in
- * WorkspaceView — both scale with the face's drawn width, and both are clipped
- * flush at the top edge so nothing spills above the panel.
+ * WorkspaceView — both scale with the face's drawn width, and both run all the
+ * way round the face.
  */
 function drawPanelShadow(
   ctx: CanvasRenderingContext2D,
@@ -76,12 +76,6 @@ function drawPanelShadow(
 
   if (!passes.length) return;
 
-  ctx.save();
-  // Everything above the face's top edge is out of bounds, as in the editor.
-  ctx.beginPath();
-  ctx.rect(0, y, ctx.canvas.width, ctx.canvas.height - y);
-  ctx.clip();
-
   for (const pass of passes) {
     ctx.save();
     ctx.shadowColor = pass.color;
@@ -93,7 +87,6 @@ function drawPanelShadow(
     ctx.fillRect(x - pass.spread, y - pass.spread, w + pass.spread * 2, h + pass.spread * 2);
     ctx.restore();
   }
-  ctx.restore();
 }
 
 /**

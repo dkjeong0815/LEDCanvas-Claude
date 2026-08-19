@@ -518,9 +518,6 @@ input[type="number"] {
 .layer-shade {
   position: absolute;
   pointer-events: none;
-  /* Expands the clip on three sides so the shading shows, and cuts it flush at
-     the top edge so nothing spills above the face. */
-  clip-path: inset(0 -100% -100% -100%);
 }
 
 .layer {

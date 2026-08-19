@@ -33,11 +33,10 @@ export interface WorkspaceViewProps {
  * photo's native resolution for the PNG; a constant blur would look right in
  * exactly one of the three.
  *
- * Nothing is drawn above the face. A panel hung on a wall is lit from above,
- * so light and shade both fall away from the top edge — anything spilling
- * upwards reads as a sticker. The top is cut off by clip-path rather than by
- * offsetting the shadow downwards, because an offset that clears the top also
- * drags the side shading down with it.
+ * All four edges are shaded. The contact stage carries no offset, so the black
+ * line at the edge is the same weight the whole way round; the softer stages
+ * are offset downwards, which leaves the top lighter than the bottom without
+ * ever leaving it bare.
  */
 function panelShadow(widthPx: number, display: DisplayOptions, glowColor?: string) {
   const parts: string[] = [];
@@ -151,9 +150,8 @@ export default function WorkspaceView({
         const shade = panelShadow(box.width, display, layer.content?.glowColor);
         return (
           <Fragment key={layer.id}>
-            {/* Its own element, painted under the face: clip-path removes
-                everything above the top edge, and clipping the face itself
-                would take the picture with it. */}
+            {/* Its own element, painted under the face — the face itself
+                cannot carry it without the picture covering it. */}
             {shade && (
               <div className="layer-shade" style={{ ...box, boxShadow: shade }} aria-hidden="true" />
             )}
