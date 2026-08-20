@@ -69,8 +69,6 @@ interface State {
 
   display: DisplayOptions;
   setDisplay: (patch: Partial<DisplayOptions>) => void;
-  /** strip every annotation and light the faces — the view a client sees */
-  presentationMode: () => void;
 
   reset: () => void;
   setBackground: (img: BackgroundImage) => void;
@@ -107,21 +105,16 @@ interface State {
 }
 
 export const DEFAULT_DISPLAY: DisplayOptions = {
-  showLabels: true,
-  showBorders: true,
-  showDims: true,
+  annotations: true,
   shadow: true,
-  shadowBlur: 1,
   // Deliberately under 1. A heavy edge on a light wall stops reading as shade
   // and starts reading as a black frame around the picture.
-  shadowStrength: 0.7,
+  shadowAmount: 0.7,
   glow: 0.5,
-  surface: true,
 };
 
 export const MAX_GLOW = 1.2;
-export const MAX_SHADOW_BLUR = 3;
-export const MAX_SHADOW_STRENGTH = 2.5;
+export const MAX_SHADOW_AMOUNT = 2.5;
 
 const initialCalibrationState = {
   referenceKind: "a4" as ReferenceKind,
@@ -342,11 +335,6 @@ export const useStore = create<State>((set, get) => ({
   display: DEFAULT_DISPLAY,
 
   setDisplay: (patch) => set((s) => ({ display: { ...s.display, ...patch } })),
-
-  presentationMode: () =>
-    set((s) => ({
-      display: { ...s.display, showLabels: false, showBorders: false, showDims: false, shadow: true },
-    })),
 
   setDefaultPitch: (mm) => set({ defaultPitchMm: mm }),
   setDefaultCabinetType: (t) => set({ defaultCabinetType: t }),

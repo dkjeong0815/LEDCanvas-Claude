@@ -95,35 +95,23 @@ export interface Layer {
 
 /**
  * What the arrangement shows on top of the content. The editor, the printed
- * sheet and the PNG all read the same options, so turning the labels off for a
- * client means they are off everywhere.
+ * sheet and the PNG all read the same options, so turning the annotations off
+ * for a client turns them off everywhere.
  */
 export interface DisplayOptions {
-  /** the layer name chip */
-  showLabels: boolean;
-  /** the coloured outline around each layer */
-  showBorders: boolean;
-  /** the real size caption in the corner */
-  showDims: boolean;
+  /**
+   * Layer name, outline and size caption, and with them the resize handle and
+   * the wall's dashed edge. They travel together: leaving any one of them on
+   * is enough to make the wall read as a drawing rather than a photograph.
+   */
+  annotations: boolean;
   /** drop shadow, so a face reads as mounted off the wall */
   shadow: boolean;
   /**
-   * Multiplies the shadow's blur. 1 is the contact-shadow look — a hard, tight
-   * edge; higher values soften it towards a face standing further off the wall
-   * or lit by a broader source.
+   * How far the face stands off the wall. Drives darkness and softness at
+   * once, because a shadow cast from further away is both.
    */
-  shadowBlur: number;
-  /**
-   * Multiplies the shadow's darkness. Kept low by default: on a light wall a
-   * heavy edge stops reading as shade and starts reading as a black frame
-   * around the picture.
-   */
-  shadowStrength: number;
+  shadowAmount: number;
   /** strength of the content-coloured light spill */
   glow: number;
-  /**
-   * Bezel highlight and inner top shading. Without them the content sits flat
-   * in the wall; with them the face reads as a thing with a glass surface.
-   */
-  surface: boolean;
 }

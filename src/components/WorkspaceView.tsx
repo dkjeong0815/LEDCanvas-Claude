@@ -41,8 +41,8 @@ export interface WorkspaceViewProps {
 function panelShadow(widthPx: number, display: DisplayOptions) {
   if (!display.shadow) return undefined;
 
-  const b = widthPx * display.shadowBlur;
-  const a = (base: number) => Math.min(1, base * display.shadowStrength).toFixed(3);
+  const b = widthPx * display.shadowAmount;
+  const a = (base: number) => Math.min(1, base * display.shadowAmount).toFixed(3);
   // No spread on the contact stage. Spread widens the darkest pixels into a
   // band of even thickness all the way round, which is exactly what a frame
   // looks like; blur alone falls off from the edge, which is what shade does.
@@ -69,29 +69,6 @@ function panelGlow(widthPx: number, display: DisplayOptions, glowColor?: string)
     `0 0 ${widthPx * 0.10}px ${widthPx * 0.025}px rgba(${glowColor}, ${display.glow})`,
     `0 0 ${widthPx * 0.34}px ${widthPx * 0.07}px rgba(${glowColor}, ${display.glow * 0.55})`,
   ].join(", ");
-}
-
-/**
- * The face's own surface, laid over the picture rather than behind it: a thin
- * bright line where the bezel catches the light, and a short dark fall from
- * the inner top edge. Both are what separate "a thing hanging on the wall"
- * from "a picture pasted into the wall".
- *
- * It rides on its own element because an inset shadow on the layer would be
- * painted underneath the video, not over it.
- */
-function faceSurface(widthPx: number) {
-  const bezel = Math.max(1, widthPx * 0.0016);
-  const fall = widthPx * 0.03;
-  return {
-    // The bezel is lit metal; the shading is the recessed glass behind it. So
-    // the shading starts inside the bezel — padding plus content-box clipping
-    // keeps it off the bright line, which would otherwise go grey at the top.
-    padding: bezel,
-    backgroundImage: `linear-gradient(to bottom, rgba(0, 0, 0, 0.55), rgba(0, 0, 0, 0) ${fall}px)`,
-    backgroundClip: "content-box" as const,
-    boxShadow: `inset 0 0 0 ${bezel}px rgba(255, 255, 255, 0.35)`,
-  };
 }
 
 export default function WorkspaceView({
@@ -138,7 +115,7 @@ export default function WorkspaceView({
         style={{ left: offsetX, top: offsetY, width: imgWidth, height: imgHeight }}
         draggable={false}
       />
-      {display.showBorders && (
+      {display.annotations && (
         <div
           className="wall-outline"
           style={boxFor(bounds.xCm, bounds.yCm, bounds.widthCm, bounds.heightCm)}
@@ -171,11 +148,11 @@ export default function WorkspaceView({
               // Drawn as an outline, pulled inside the box: it takes no space,
               // so the content fills the face's real size whether the outline
               // is on or off.
-              outline: display.showBorders ? `2px solid ${color}` : undefined,
+              outline: display.annotations ? `2px solid ${color}` : undefined,
               outlineOffset: -2,
               // The stylesheet keeps a selection ring for .layer.selected; it
               // rides with the border toggle, so state it here either way.
-              boxShadow: selected && display.showBorders ? "0 0 0 2px rgba(255, 255, 255, 0.5)" : "none",
+              boxShadow: selected && display.annotations ? "0 0 0 2px rgba(255, 255, 255, 0.5)" : "none",
             }}
             onPointerDown={onLayerPointerDown ? (e) => onLayerPointerDown(e, layer) : undefined}
             onPointerMove={onPointerMove}
@@ -203,24 +180,17 @@ export default function WorkspaceView({
                   playsInline
                 />
               ))}
-            {display.surface && (
-              <div
-                className="layer-face"
-                style={faceSurface(box.width)}
-                aria-hidden="true"
-              />
-            )}
-            {display.showLabels && (
+            {display.annotations && (
               <span className="layer-badge" style={{ background: color }}>
                 {layer.label}
               </span>
             )}
-            {display.showDims && (
+            {display.annotations && (
               <span className="layer-dims">
                 {widthCm.toFixed(0)} × {heightCm.toFixed(0)} cm
               </span>
             )}
-            {showHandles && display.showBorders && (
+            {showHandles && display.annotations && (
               <div
                 className="layer-handle"
                 style={{ background: color }}

@@ -551,12 +551,6 @@ input[type="number"] {
   pointer-events: none;
 }
 
-.layer-face {
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-}
-
 .layer-badge {
   position: absolute;
   left: 0;
@@ -924,6 +918,11 @@ input[type="number"] {
   gap: 8px 10px;
 }
 
+.toggle-rows label,
+.slider-row {
+  cursor: help;
+}
+
 .toggle-rows label {
   display: flex;
   align-items: center;
@@ -965,6 +964,11 @@ input[type="number"] {
 .slider-row input[type="range"] {
   width: 100%;
   accent-color: var(--primary);
+  cursor: pointer;
+}
+
+.toggle-rows input[type="checkbox"],
+.slider-row input {
   cursor: pointer;
 }
 

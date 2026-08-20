@@ -69,8 +69,8 @@ function drawPanelShadow(
   }
 
   if (display.shadow) {
-    const b = w * display.shadowBlur;
-    const a = (base: number) => Math.min(1, base * display.shadowStrength);
+    const b = w * display.shadowAmount;
+    const a = (base: number) => Math.min(1, base * display.shadowAmount);
     passes.push({ color: `rgba(0, 0, 0, ${a(0.2)})`, blur: b * 0.065, spread: 0, offsetY: w * 0.022 });
     passes.push({ color: `rgba(0, 0, 0, ${a(0.3)})`, blur: b * 0.028, spread: 0, offsetY: w * 0.008 });
     passes.push({ color: `rgba(0, 0, 0, ${a(0.5)})`, blur: b * 0.01, spread: 0, offsetY: 0 });
@@ -103,44 +103,13 @@ function drawPanelShadow(
 }
 
 /**
- * The face's own surface — bezel highlight and inner top shading — mirroring
- * faceSurface() in WorkspaceView. Drawn over the content, never behind it.
- */
-function drawFaceSurface(
-  ctx: CanvasRenderingContext2D,
-  x: number,
-  y: number,
-  w: number,
-  h: number
-) {
-  const bezel = Math.max(1, w * 0.0016);
-  const fall = Math.min(w * 0.03, h * 0.5);
-  ctx.save();
-  ctx.beginPath();
-  ctx.rect(x, y, w, h);
-  ctx.clip();
-
-  // Inside the bezel, so the bright line keeps its brightness at the top.
-  const shade = ctx.createLinearGradient(0, y + bezel, 0, y + bezel + fall);
-  shade.addColorStop(0, "rgba(0, 0, 0, 0.55)");
-  shade.addColorStop(1, "rgba(0, 0, 0, 0)");
-  ctx.fillStyle = shade;
-  ctx.fillRect(x + bezel, y + bezel, w - bezel * 2, fall);
-
-  ctx.strokeStyle = "rgba(255, 255, 255, 0.35)";
-  ctx.lineWidth = bezel;
-  ctx.strokeRect(x + bezel / 2, y + bezel / 2, w - bezel, h - bezel);
-  ctx.restore();
-}
-
-/**
  * Draws the label chip and size caption exactly the way the editor overlays
  * them, so a printed sheet reads as the same picture the user arranged.
  */
 function drawLayerAnnotations(
   ctx: CanvasRenderingContext2D,
-  label: string | null,
-  sizeText: string | null,
+  label: string,
+  sizeText: string,
   color: string,
   topLeft: Point,
   bottomRight: Point,
@@ -151,19 +120,12 @@ function drawLayerAnnotations(
   ctx.textBaseline = "middle";
 
   const padding = fontPx * 0.42;
-  if (label !== null) {
-    const chipHeight = fontPx * 1.5;
-    const chipWidth = ctx.measureText(label).width + padding * 2;
-    ctx.fillStyle = color;
-    ctx.fillRect(topLeft.x, topLeft.y, chipWidth, chipHeight);
-    ctx.fillStyle = "#0b1220";
-    ctx.fillText(label, topLeft.x + padding, topLeft.y + chipHeight / 2);
-  }
-
-  if (sizeText === null) {
-    ctx.restore();
-    return;
-  }
+  const chipHeight = fontPx * 1.5;
+  const chipWidth = ctx.measureText(label).width + padding * 2;
+  ctx.fillStyle = color;
+  ctx.fillRect(topLeft.x, topLeft.y, chipWidth, chipHeight);
+  ctx.fillStyle = "#0b1220";
+  ctx.fillText(label, topLeft.x + padding, topLeft.y + chipHeight / 2);
 
   ctx.font = `500 ${fontPx * 0.82}px system-ui, sans-serif`;
   ctx.textAlign = "right";
@@ -245,19 +207,17 @@ export async function renderComposite(
       ctx.restore();
     }
 
-    if (opts.display.surface) drawFaceSurface(ctx, x, y, w, h);
-
-    if (opts.display.showBorders) {
+    if (opts.display.annotations) {
       ctx.strokeStyle = color;
       ctx.lineWidth = Math.max(1.5, calibration.pxPerCm * 0.14);
       ctx.strokeRect(x, y, w, h);
     }
 
-    if (opts.display.showLabels || opts.display.showDims) {
+    if (opts.display.annotations) {
       drawLayerAnnotations(
         ctx,
-        opts.display.showLabels ? layer.label : null,
-        opts.display.showDims ? `${widthCm.toFixed(0)} × ${heightCm.toFixed(0)} cm` : null,
+        layer.label,
+        `${widthCm.toFixed(0)} × ${heightCm.toFixed(0)} cm`,
         color,
         { x, y },
         { x: x + w, y: y + h },
