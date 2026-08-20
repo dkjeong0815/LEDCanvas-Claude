@@ -375,22 +375,14 @@ p {
 
 .loupe {
   position: absolute;
-  transform: translate(-50%, -50%);
+  left: 0;
+  top: 0;
   border-radius: 50%;
   border: 2px solid var(--primary);
   box-shadow: 0 6px 22px rgba(0, 0, 0, 0.55);
-  background-repeat: no-repeat;
   pointer-events: none;
-}
-
-.loupe::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(transparent 49%, var(--primary) 49% 51%, transparent 51%),
-    linear-gradient(90deg, transparent 49%, var(--primary) 49% 51%, transparent 51%);
-  opacity: 0.7;
-  border-radius: 50%;
+  /* Its own layer, so moving it never repaints the photo underneath. */
+  will-change: transform;
 }
 
 .segmented {

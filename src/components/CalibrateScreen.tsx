@@ -27,10 +27,17 @@ export default function CalibrateScreen() {
 
   const imgRef = useRef<HTMLImageElement>(null);
   const stageRef = useRef<HTMLDivElement>(null);
+  const loupeRef = useRef<HTMLCanvasElement>(null);
   const [display, setDisplay] = useState({ width: 0, height: 0, offsetX: 0, offsetY: 0 });
   const [auto, setAuto] = useState<AutoState>({ status: "idle" });
   const [dragIndex, setDragIndex] = useState<number | null>(null);
-  const [loupe, setLoupe] = useState<{ x: number; y: number } | null>(null);
+  // Shown or not is React's business; where it is, is not. A pointer emits
+  // moves far faster than the screen refreshes, and routing each one through
+  // state re-rendered the photo, the overlay and every corner marker just to
+  // shift a 132 px lens. Position lives in a ref and is written straight to the
+  // element, so a move costs one transform and one canvas blit.
+  const [loupeOn, setLoupeOn] = useState(false);
+  const loupePos = useRef<{ x: number; y: number } | null>(null);
 
   // The displayed size changes with the window, the sidebar, zoom — anything.
   // Tracking it continuously is what keeps the corner markers glued to the
@@ -135,15 +142,19 @@ export default function CalibrateScreen() {
 
   const handleStageMove = (e: React.PointerEvent) => {
     if (!lensActive) {
-      if (loupe) setLoupe(null);
+      if (loupeOn) setLoupeOn(false);
       return;
     }
     const p = toNatural(e.clientX, e.clientY);
-    setLoupe(p ? { x: p.xDisp, y: p.yDisp } : null);
+    if (!p) {
+      if (loupeOn) setLoupeOn(false);
+      return;
+    }
+    placeLoupe(p.xDisp, p.yDisp);
   };
 
   const handleStageLeave = () => {
-    if (dragIndex === null) setLoupe(null);
+    if (dragIndex === null) setLoupeOn(false);
   };
 
   const handleCornerDown = (e: React.PointerEvent, index: number) => {
@@ -151,23 +162,26 @@ export default function CalibrateScreen() {
     (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
     setDragIndex(index);
     const p = toNatural(e.clientX, e.clientY);
-    if (p) setLoupe({ x: p.xDisp, y: p.yDisp });
+    if (p) placeLoupe(p.xDisp, p.yDisp);
   };
 
   const handleCornerMove = (e: React.PointerEvent, index: number) => {
     if (dragIndex !== index) return;
+    // Without this the move also reaches the stage handler, which recomputes
+    // the same point and places the same lens a second time.
+    e.stopPropagation();
     const p = toNatural(e.clientX, e.clientY);
     if (!p) return;
     const next = corners.slice();
     next[index] = { x: p.x, y: p.y };
     setCorners(next as Quad, false);
-    setLoupe({ x: p.xDisp, y: p.yDisp });
+    placeLoupe(p.xDisp, p.yDisp);
   };
 
   const handleCornerUp = (e: React.PointerEvent) => {
     (e.currentTarget as HTMLElement).releasePointerCapture?.(e.pointerId);
     setDragIndex(null);
-    setLoupe(null);
+    setLoupeOn(false);
   };
 
   // A 4000 px photo shown 810 px wide is already an 5:1 downscale, so a fixed 4x
@@ -177,6 +191,73 @@ export default function CalibrateScreen() {
     LOUPE_MIN_ZOOM,
     display.width > 0 ? background.naturalWidth / display.width : LOUPE_MIN_ZOOM
   );
+
+  // Cuts the lens view straight out of the photo instead of scaling the whole
+  // photo behind a window, so the cost is the size of the lens and nothing
+  // else, however large the photo is.
+  const paintLoupe = useCallback(() => {
+    const canvas = loupeRef.current;
+    const img = imgRef.current;
+    const pos = loupePos.current;
+    if (!canvas || !img || !pos || display.width <= 0) return;
+
+    canvas.style.transform = `translate3d(${display.offsetX + pos.x}px, ${
+      display.offsetY + pos.y
+    }px, 0) translate(-50%, -50%)`;
+
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+
+    const natPerDisp = background.naturalWidth / display.width;
+    // Side of the source window, in photo pixels.
+    const side = (LOUPE_SIZE * natPerDisp) / lensZoom;
+    const sx = pos.x * natPerDisp - side / 2;
+    const sy = pos.y * natPerDisp - side / 2;
+    const scale = LOUPE_SIZE / side;
+
+    ctx.fillStyle = "#0b0d12";
+    ctx.fillRect(0, 0, LOUPE_SIZE, LOUPE_SIZE);
+
+    // Clamp to the photo and shift the destination to match, so a lens hanging
+    // over the edge shows the edge rather than a stretched copy of it.
+    const x0 = Math.max(0, sx);
+    const y0 = Math.max(0, sy);
+    const x1 = Math.min(background.naturalWidth, sx + side);
+    const y1 = Math.min(background.naturalHeight, sy + side);
+    if (x1 > x0 && y1 > y0) {
+      ctx.drawImage(
+        img,
+        x0,
+        y0,
+        x1 - x0,
+        y1 - y0,
+        (x0 - sx) * scale,
+        (y0 - sy) * scale,
+        (x1 - x0) * scale,
+        (y1 - y0) * scale
+      );
+    }
+
+    // Crosshair, drawn into the canvas rather than as another element: it has
+    // to move with the lens anyway, and one element moves cheaper than two.
+    const mid = LOUPE_SIZE / 2;
+    const thickness = LOUPE_SIZE * 0.02;
+    ctx.fillStyle = "rgba(79, 140, 255, 0.7)";
+    ctx.fillRect(0, mid - thickness / 2, LOUPE_SIZE, thickness);
+    ctx.fillRect(mid - thickness / 2, 0, thickness, LOUPE_SIZE);
+  }, [background.naturalWidth, background.naturalHeight, display, lensZoom]);
+
+  const placeLoupe = (x: number, y: number) => {
+    loupePos.current = { x, y };
+    if (!loupeOn) setLoupeOn(true);
+    else paintLoupe();
+  };
+
+  // Covers the two cases the pointer cannot: the first paint after the lens is
+  // mounted, and a resize that moves the photo under a lens already showing.
+  useEffect(() => {
+    if (loupeOn) paintLoupe();
+  }, [loupeOn, paintLoupe]);
 
   const complete = corners.length === 4;
   const orientation = complete && referenceKind === "a4" ? resolveA4Size(corners.slice(0, 4) as Quad) : null;
@@ -237,21 +318,13 @@ export default function CalibrateScreen() {
             );
           })}
 
-          {loupe && (
-            <div
+          {loupeOn && (
+            <canvas
+              ref={loupeRef}
               className="loupe"
-              style={{
-                // loupe.x/y are photo-relative; the element sits in the stage.
-                left: display.offsetX + loupe.x,
-                top: display.offsetY + loupe.y,
-                width: LOUPE_SIZE,
-                height: LOUPE_SIZE,
-                backgroundImage: `url(${background.url})`,
-                backgroundSize: `${display.width * lensZoom}px ${display.height * lensZoom}px`,
-                backgroundPosition: `${-loupe.x * lensZoom + LOUPE_SIZE / 2}px ${
-                  -loupe.y * lensZoom + LOUPE_SIZE / 2
-                }px`,
-              }}
+              width={LOUPE_SIZE}
+              height={LOUPE_SIZE}
+              style={{ width: LOUPE_SIZE, height: LOUPE_SIZE }}
             />
           )}
         </div>
