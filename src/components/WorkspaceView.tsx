@@ -2,6 +2,7 @@ import { Fragment } from "react";
 import { wallBounds } from "../state/store";
 import { layerSizeCm } from "../lib/cabinets";
 import { layerColor } from "../lib/palette";
+import { screenFilter } from "../lib/faceFilter";
 import type { Calibration, DisplayOptions, Layer } from "../types";
 
 export interface WorkspaceViewProps {
@@ -69,25 +70,6 @@ function panelGlow(widthPx: number, display: DisplayOptions, glowColor?: string)
     `0 0 ${widthPx * 0.10}px ${widthPx * 0.025}px rgba(${glowColor}, ${display.glow})`,
     `0 0 ${widthPx * 0.34}px ${widthPx * 0.07}px rgba(${glowColor}, ${display.glow * 0.55})`,
   ].join(", ");
-}
-
-/**
- * Drives the content like a lit panel instead of printed paper.
- *
- * Brightness alone just washes the picture out. What actually reads as
- * self-lit is the contrast: an LED's black stays black while its highlights
- * outrun anything reflective beside them. Saturation follows because a panel's
- * colour gamut is wider than a photograph of a wall.
- *
- * It is a compositor filter, so a video costs the same as a still — no reason
- * to treat the two differently here.
- */
-function screenFilter(display: DisplayOptions) {
-  if (!(display.screen > 0)) return undefined;
-  const a = display.screen;
-  return `brightness(${(1 + a * 0.45).toFixed(3)}) contrast(${(1 + a * 0.35).toFixed(
-    3
-  )}) saturate(${(1 + a * 0.3).toFixed(3)})`;
 }
 
 export default function WorkspaceView({
@@ -193,6 +175,9 @@ export default function WorkspaceView({
               ) : (
                 <video
                   className="layer-content"
+                  // The pixel preview reads frames off this element rather
+                  // than decoding the same file a second time.
+                  data-layer-id={layer.id}
                   src={layer.content.url}
                   poster={layer.content.posterUrl}
                   style={{ objectFit: layer.content.fitMode, filter: lit }}

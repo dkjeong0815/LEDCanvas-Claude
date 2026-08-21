@@ -910,6 +910,25 @@ input[type="number"] {
   gap: 8px 10px;
 }
 
+.pixel-preview {
+  width: 100%;
+  border-radius: 6px;
+  overflow: hidden;
+  background: #05070a;
+  border: 1px solid var(--line);
+  line-height: 0;
+}
+
+.pixel-preview canvas {
+  display: block;
+  cursor: grab;
+  touch-action: none;
+}
+
+.pixel-preview canvas:active {
+  cursor: grabbing;
+}
+
 .toggle-rows label,
 .slider-row {
   cursor: help;

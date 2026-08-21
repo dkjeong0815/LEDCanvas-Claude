@@ -4,6 +4,7 @@ import LayerPanel from "./panels/LayerPanel";
 import SummaryPanel from "./panels/SummaryPanel";
 import ContentPanel from "./panels/ContentPanel";
 import DisplayPanel from "./panels/DisplayPanel";
+import PixelPreviewPanel from "./panels/PixelPreviewPanel";
 import PrintView from "./PrintView";
 import { useStore, wallBounds } from "../state/store";
 
@@ -52,6 +53,7 @@ export default function EditorScreen() {
       <aside className="side-pane">
         <LayerPanel />
         <ContentPanel />
+        <PixelPreviewPanel />
         <DisplayPanel />
         <SummaryPanel />
       </aside>

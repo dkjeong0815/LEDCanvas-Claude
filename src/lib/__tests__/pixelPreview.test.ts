@@ -1,0 +1,165 @@
+import { describe, expect, it } from "vitest";
+import { boxDownsample, previewGeometry, sourceRectFor } from "../pixelPreview";
+import type { Pixels } from "../pixelPreview";
+
+const canvas = { canvasWidthPx: 308, canvasHeightPx: 173 };
+
+describe("previewGeometry", () => {
+  it("puts several screen pixels on each LED at a hand-sized patch", () => {
+    // The whole point: at this magnification an LED is visible as an LED.
+    for (const pitchMm of [1.2, 1.5, 1.8, 2.5, 3, 4]) {
+      const g = previewGeometry({ pitchMm, regionWidthCm: 12, ...canvas });
+      expect(g.ledPx).toBeGreaterThan(3);
+      expect(g.gapPx).toBeGreaterThan(0);
+    }
+  });
+
+  it("separates pitches the arrangement view cannot", () => {
+    const fine = previewGeometry({ pitchMm: 1.5, regionWidthCm: 12, ...canvas });
+    const coarse = previewGeometry({ pitchMm: 1.8, regionWidthCm: 12, ...canvas });
+    // 1.5 and 1.8 mm differ by a fifth; the patch must show that, not round it away.
+    expect(fine.cols).toBe(80);
+    expect(coarse.cols).toBe(67);
+    expect(coarse.ledPx / fine.ledPx).toBeCloseTo(80 / 67, 5);
+  });
+
+  it("drops the grid rather than draw moiré when LEDs get too small", () => {
+    // A metre-wide patch at 1.2 mm is 833 LEDs across, well under a pixel each.
+    const g = previewGeometry({ pitchMm: 1.2, regionWidthCm: 100, ...canvas });
+    expect(g.ledPx).toBeLessThan(1);
+    expect(g.gapPx).toBe(0);
+  });
+
+  it("reports the real size it actually shows, rounded to whole LEDs", () => {
+    const g = previewGeometry({ pitchMm: 4, regionWidthCm: 12, ...canvas });
+    expect(g.cols).toBe(30);
+    expect(g.widthCm).toBeCloseTo(12, 6);
+    expect(g.heightCm).toBeCloseTo((g.rows * 4) / 10, 6);
+  });
+});
+
+describe("sourceRectFor", () => {
+  const face = { faceWidthCm: 192, faceHeightCm: 96 };
+
+  it("centres on the middle of the content when the patch is centred", () => {
+    const r = sourceRectFor({
+      contentWidth: 1920,
+      contentHeight: 960,
+      ...face,
+      patchWidthCm: 12,
+      patchHeightCm: 6,
+      centre: { x: 0.5, y: 0.5 },
+      fitMode: "cover",
+    });
+    expect(r.sx + r.sw / 2).toBeCloseTo(960, 6);
+    expect(r.sy + r.sh / 2).toBeCloseTo(480, 6);
+    // 1920 px over 192 cm is 10 px/cm, so a 12 cm patch is 120 px of content.
+    expect(r.sw).toBeCloseTo(120, 6);
+    expect(r.sh).toBeCloseTo(60, 6);
+  });
+
+  it("crops the overflowing axis under cover, as object-fit does", () => {
+    // A square picture on a 2:1 face: cover fills the width and cuts the height.
+    const r = sourceRectFor({
+      contentWidth: 1000,
+      contentHeight: 1000,
+      ...face,
+      patchWidthCm: 192,
+      patchHeightCm: 96,
+      centre: { x: 0.5, y: 0.5 },
+      fitMode: "cover",
+    });
+    expect(r.sx).toBeCloseTo(0, 6);
+    expect(r.sw).toBeCloseTo(1000, 6);
+    expect(r.sh).toBeCloseTo(500, 6);
+    expect(r.sy).toBeCloseTo(250, 6);
+  });
+
+  it("reaches past the picture under contain, where the face has bars", () => {
+    // Same square picture, contained: it fits the height and leaves side bars,
+    // so a patch at the far left falls outside the picture entirely.
+    const r = sourceRectFor({
+      contentWidth: 1000,
+      contentHeight: 1000,
+      ...face,
+      patchWidthCm: 12,
+      patchHeightCm: 6,
+      centre: { x: 0, y: 0.5 },
+      fitMode: "contain",
+    });
+    expect(r.sx).toBeLessThan(0);
+  });
+
+  it("follows the patch as it pans", () => {
+    const at = (x: number) =>
+      sourceRectFor({
+        contentWidth: 1920,
+        contentHeight: 960,
+        ...face,
+        patchWidthCm: 12,
+        patchHeightCm: 6,
+        centre: { x, y: 0.5 },
+        fitMode: "cover",
+      }).sx;
+    expect(at(0.75) - at(0.25)).toBeCloseTo(960, 6);
+  });
+});
+
+function field(width: number, height: number, value: (x: number, y: number) => number): Pixels {
+  const img: Pixels = { data: new Uint8ClampedArray(width * height * 4), width, height };
+  for (let y = 0; y < height; y++) {
+    for (let x = 0; x < width; x++) {
+      const i = (y * width + x) * 4;
+      const v = value(x, y);
+      img.data[i] = img.data[i + 1] = img.data[i + 2] = v;
+      img.data[i + 3] = 255;
+    }
+  }
+  return img;
+}
+
+function contrast(img: Pixels) {
+  const vals: number[] = [];
+  for (let i = 0; i < img.data.length; i += 4) vals.push(img.data[i]);
+  const mean = vals.reduce((a, v) => a + v, 0) / vals.length;
+  return Math.sqrt(vals.reduce((a, v) => a + (v - mean) ** 2, 0) / vals.length);
+}
+
+describe("boxDownsample", () => {
+  it("averages the area an LED covers", () => {
+    // 4x4 of alternating 0/200 columns, down to 2x2: every LED sees both.
+    const src = field(4, 4, (x) => (x % 2 === 0 ? 0 : 200));
+    const out = boxDownsample(src, 2, 2);
+    for (let i = 0; i < out.data.length; i += 4) expect(out.data[i]).toBeCloseTo(100, 6);
+  });
+
+  it("leaves detail alone when there is one LED per source pixel", () => {
+    const src = field(8, 8, (x, y) => ((x + y) % 2 === 0 ? 10 : 240));
+    const out = boxDownsample(src, 8, 8);
+    expect(contrast(out)).toBeCloseTo(contrast(src), 6);
+  });
+
+  it("loses contrast as the pitch coarsens, and never gains it", () => {
+    // Detail two pixels wide, sampled by ever coarser grids. A canvas
+    // downscale can hand back MORE contrast than the source here by
+    // point-sampling; averaging cannot.
+    let seed = 7;
+    const rnd = () => (seed = (seed * 1103515245 + 12345) & 0x7fffffff) / 0x7fffffff;
+    const cell: number[][] = [];
+    for (let y = 0; y < 60; y++) {
+      cell[y] = [];
+      for (let x = 0; x < 120; x++) cell[y][x] = rnd() < 0.5 ? 20 : 235;
+    }
+    const src = field(240, 120, (x, y) => cell[y >> 1][x >> 1]);
+    const source = contrast(src);
+
+    let previous = source;
+    for (const cols of [120, 80, 60, 40, 30, 20]) {
+      const out = boxDownsample(src, cols, Math.round((cols * 120) / 240));
+      const got = contrast(out);
+      expect(got).toBeLessThanOrEqual(source + 1e-6);
+      expect(got).toBeLessThanOrEqual(previous + 1e-6);
+      previous = got;
+    }
+  });
+});

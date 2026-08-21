@@ -1,6 +1,7 @@
 import type { Calibration, DisplayOptions, Layer, Point } from "../types";
 import { layerSizeCm } from "./cabinets";
 import { layerColor } from "./palette";
+import { screenFilter } from "./faceFilter";
 
 function loadImage(src: string): Promise<HTMLImageElement> {
   return new Promise((resolve, reject) => {
@@ -47,16 +48,6 @@ export interface CompositeOptions {
   showCabinetGrid?: boolean;
   /** annotations, shadow and glow — the same options the editor renders with */
   display: DisplayOptions;
-}
-
-/**
- * Mirrors screenFilter() in WorkspaceView, so the PNG shows the panel at the
- * brightness the arrangement was judged at.
- */
-function screenFilter(display: DisplayOptions) {
-  if (!(display.screen > 0)) return undefined;
-  const a = display.screen;
-  return `brightness(${1 + a * 0.45}) contrast(${1 + a * 0.35}) saturate(${1 + a * 0.3})`;
 }
 
 /**
