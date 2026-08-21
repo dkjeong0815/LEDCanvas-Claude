@@ -747,10 +747,19 @@ input[type="number"] {
 
 .pixel-foot {
   display: flex;
-  flex-wrap: wrap;
-  gap: 6px 18px;
-  justify-content: center;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
   text-align: center;
+}
+
+.pixel-foot .chip-row {
+  align-items: center;
+  justify-content: center;
+}
+
+.pixel-foot p {
+  margin: 0;
 }
 
 .print-overlay {

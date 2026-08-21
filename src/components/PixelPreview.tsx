@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useStore } from "../state/store";
-import { DEFAULT_PIXEL_PITCH, layerSizeCm } from "../lib/cabinets";
+import { DEFAULT_PIXEL_PITCH, PIXEL_PITCH_PRESETS, layerSizeCm } from "../lib/cabinets";
 import {
   MODULE_HEIGHT_CM,
   MODULE_WIDTH_CM,
@@ -34,6 +34,7 @@ export default function PixelPreview({ onClose }: { onClose: () => void }) {
   const layers = useStore((s) => s.layers);
   const selectedLayerId = useStore((s) => s.selectedLayerId);
   const display = useStore((s) => s.display);
+  const setLayerPitch = useStore((s) => s.setLayerPitch);
 
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const scratchRef = useRef<HTMLCanvasElement | null>(null);
@@ -45,7 +46,14 @@ export default function PixelPreview({ onClose }: { onClose: () => void }) {
   const [width, setWidth] = useState(0);
   const [shown, setShown] = useState<{ cols: number; rows: number } | null>(null);
 
-  const layer = layers.find((l) => l.id === selectedLayerId) ?? layers[0] ?? null;
+  // The selected face if it has something to show, otherwise the first that
+  // does — opening onto "콘텐츠를 올리세요" when another face is ready is a
+  // dead end the user did not ask for.
+  const layer =
+    layers.find((l) => l.id === selectedLayerId && l.content) ??
+    layers.find((l) => l.content) ??
+    layers.find((l) => l.id === selectedLayerId) ??
+    null;
   const content = layer?.content ?? null;
   const pitchMm = layer?.pixelPitchMm ?? DEFAULT_PIXEL_PITCH;
   const pack = packageFor(pitchMm);
@@ -279,18 +287,28 @@ export default function PixelPreview({ onClose }: { onClose: () => void }) {
             />
           </div>
 
-          <footer className="pixel-foot muted small">
-            <span>픽셀 피치 {pitchMm} mm</span>
-            <span>
-              {pack.name} · 발광부 {pack.emitterMm} mm
-            </span>
-            <span>충전율 {Math.round(fillRatio(emitterRatio) * 100)}%</span>
-            {shown && (
-              <span>
-                모듈당 LED {shown.cols} × {shown.rows}
-              </span>
-            )}
-            <span>끌어서 이동</span>
+          <footer className="pixel-foot">
+            {/* The pitch belongs here, not because the preview needs a control
+                but because it is the thing being compared. Sending the user out
+                to change it and back in again defeats the point of the view. */}
+            <div className="chip-row">
+              <span className="muted small">픽셀 피치</span>
+              {PIXEL_PITCH_PRESETS.map((p) => (
+                <button
+                  key={p}
+                  className={`chip ${pitchMm === p ? "active" : ""}`}
+                  onClick={() => layer && setLayerPitch(layer.id, p)}
+                >
+                  {p}
+                </button>
+              ))}
+            </div>
+
+            <p className="muted small">
+              {pack.name} · 발광부 {pack.emitterMm} mm · 충전율{" "}
+              {Math.round(fillRatio(emitterRatio) * 100)}%
+              {shown ? ` · 모듈당 LED ${shown.cols} × ${shown.rows}` : ""} · 끌어서 이동
+            </p>
           </footer>
         </>
       )}

@@ -1,7 +1,7 @@
 import { useStore } from "../../state/store";
 import { CABINETS, CABINET_TYPES, PIXEL_PITCH_PRESETS, cabinetCount, layerResolutionPx, layerSizeCm } from "../../lib/cabinets";
 
-export default function LayerPanel() {
+export default function LayerPanel({ onOpenPixelPreview }: { onOpenPixelPreview: () => void }) {
   const layers = useStore((s) => s.layers);
   const selectedLayerId = useStore((s) => s.selectedLayerId);
   const selectLayer = useStore((s) => s.selectLayer);
@@ -92,6 +92,19 @@ export default function LayerPanel() {
               </button>
             ))}
           </div>
+
+          <button
+            className="btn btn-ghost btn-sm"
+            disabled={!selected.content}
+            onClick={onOpenPixelPreview}
+            title={
+              selected.content
+                ? "이 피치의 실제 픽셀 구조를 크게 봅니다."
+                : "콘텐츠를 올리면 볼 수 있습니다."
+            }
+          >
+            픽셀 미리보기
+          </button>
 
           <dl className="stats">
             <div>

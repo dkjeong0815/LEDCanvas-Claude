@@ -14,7 +14,6 @@ export default function EditorScreen() {
   const layers = useStore((s) => s.layers);
   const [printing, setPrinting] = useState(false);
   const [previewing, setPreviewing] = useState(false);
-  const withContent = layers.some((l) => l.content);
 
   if (!calibration) return null;
   const bounds = wallBounds(calibration);
@@ -35,13 +34,6 @@ export default function EditorScreen() {
               스케일 다시 잡기
             </button>
             <button
-              className="btn btn-ghost btn-sm"
-              disabled={!withContent}
-              onClick={() => setPreviewing(true)}
-            >
-              픽셀 미리보기
-            </button>
-            <button
               className="btn btn-primary btn-sm"
               disabled={layers.length === 0}
               onClick={() => setPrinting(true)}
@@ -60,7 +52,7 @@ export default function EditorScreen() {
       </section>
 
       <aside className="side-pane">
-        <LayerPanel />
+        <LayerPanel onOpenPixelPreview={() => setPreviewing(true)} />
         <ContentPanel />
         <DisplayPanel />
         <SummaryPanel />
