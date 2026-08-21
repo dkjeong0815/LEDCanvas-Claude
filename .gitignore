@@ -3,5 +3,10 @@ dist/
 *.local
 .DS_Store
 
-# 테스트용 현장 사진 (public/은 그대로 배포되므로 커밋 금지)
+# 빌드 산출물. 빌드할 때마다 바뀌어 매번 변경으로 잡힌다.
+tsconfig.tsbuildinfo
+
+# public/은 dist/로 그대로 복사돼 공개 URL로 노출된다. 테스트용 사진·영상은
+# 여기에 두더라도 절대 커밋하지 않는다. __ 접두사는 임시 파일 표시용.
 public/test-wall.jpg
+public/__*
