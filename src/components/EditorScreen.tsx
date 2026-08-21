@@ -4,7 +4,7 @@ import LayerPanel from "./panels/LayerPanel";
 import SummaryPanel from "./panels/SummaryPanel";
 import ContentPanel from "./panels/ContentPanel";
 import DisplayPanel from "./panels/DisplayPanel";
-import PixelPreviewPanel from "./panels/PixelPreviewPanel";
+import PixelPreview from "./PixelPreview";
 import PrintView from "./PrintView";
 import { useStore, wallBounds } from "../state/store";
 
@@ -13,6 +13,8 @@ export default function EditorScreen() {
   const recalibrate = useStore((s) => s.recalibrate);
   const layers = useStore((s) => s.layers);
   const [printing, setPrinting] = useState(false);
+  const [previewing, setPreviewing] = useState(false);
+  const withContent = layers.some((l) => l.content);
 
   if (!calibration) return null;
   const bounds = wallBounds(calibration);
@@ -31,6 +33,13 @@ export default function EditorScreen() {
           <div className="btn-row">
             <button className="btn btn-ghost btn-sm" onClick={recalibrate}>
               스케일 다시 잡기
+            </button>
+            <button
+              className="btn btn-ghost btn-sm"
+              disabled={!withContent}
+              onClick={() => setPreviewing(true)}
+            >
+              픽셀 미리보기
             </button>
             <button
               className="btn btn-primary btn-sm"
@@ -53,11 +62,11 @@ export default function EditorScreen() {
       <aside className="side-pane">
         <LayerPanel />
         <ContentPanel />
-        <PixelPreviewPanel />
         <DisplayPanel />
         <SummaryPanel />
       </aside>
 
+      {previewing && <PixelPreview onClose={() => setPreviewing(false)} />}
       {printing && <PrintView onClose={() => setPrinting(false)} />}
     </div>
   );

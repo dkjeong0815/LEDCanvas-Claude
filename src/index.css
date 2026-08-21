@@ -699,6 +699,60 @@ input[type="number"] {
 
 /* ---------- print sheets ---------- */
 
+.pixel-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  background: #0b0d12;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 18px;
+  padding: 24px;
+  overflow: auto;
+}
+
+.pixel-head {
+  width: 100%;
+  max-width: 1400px;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.pixel-head h2 {
+  margin: 0 0 2px;
+  font-size: 16px;
+}
+
+.pixel-stage {
+  border-radius: 8px;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  background: #05070a;
+  line-height: 0;
+}
+
+.pixel-stage canvas {
+  display: block;
+  cursor: grab;
+  touch-action: none;
+}
+
+.pixel-stage canvas:active {
+  cursor: grabbing;
+}
+
+.pixel-foot {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 18px;
+  justify-content: center;
+  text-align: center;
+}
+
 .print-overlay {
   position: fixed;
   inset: 0;
@@ -908,25 +962,6 @@ input[type="number"] {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 8px 10px;
-}
-
-.pixel-preview {
-  width: 100%;
-  border-radius: 6px;
-  overflow: hidden;
-  background: #05070a;
-  border: 1px solid var(--line);
-  line-height: 0;
-}
-
-.pixel-preview canvas {
-  display: block;
-  cursor: grab;
-  touch-action: none;
-}
-
-.pixel-preview canvas:active {
-  cursor: grabbing;
 }
 
 .toggle-rows label,

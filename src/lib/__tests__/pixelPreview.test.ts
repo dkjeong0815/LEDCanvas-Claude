@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
-  PATCH_WIDTH_CM,
+  MODULE_HEIGHT_CM,
+  MODULE_WIDTH_CM,
   boxDownsample,
   defaultEmitterRatio,
   fillRatio,
@@ -10,8 +11,9 @@ import {
 } from "../pixelPreview";
 import type { Pixels } from "../pixelPreview";
 
-const canvas = { canvasWidthPx: 308, canvasHeightPx: 173 };
-const patch = { regionWidthCm: PATCH_WIDTH_CM, ...canvas };
+// The overlay gets the width of the window, not a sidebar column.
+const canvas = { canvasWidthPx: 1200, canvasHeightPx: 600 };
+const patch = { regionWidthCm: MODULE_WIDTH_CM, regionHeightCm: MODULE_HEIGHT_CM, ...canvas };
 
 /** Share of an LED cell that ends up drawn dark, alpha included. */
 function darkShare(pitchMm: number) {
@@ -33,22 +35,28 @@ describe("previewGeometry", () => {
     const fine = previewGeometry({ pitchMm: 1.5, ...patch });
     const coarse = previewGeometry({ pitchMm: 1.8, ...patch });
     // 1.5 and 1.8 mm differ by a fifth; the patch must show that, not round it away.
-    expect(fine.cols).toBe(67);
-    expect(coarse.cols).toBe(56);
-    expect(coarse.ledPx / fine.ledPx).toBeCloseTo(67 / 56, 5);
+    expect(fine.cols).toBe(213);
+    expect(coarse.cols).toBe(178);
+    expect(coarse.ledPx / fine.ledPx).toBeCloseTo(213 / 178, 5);
   });
 
   it("drops the grid rather than draw moiré when LEDs get too small", () => {
     // A metre-wide patch at 1.2 mm is 833 LEDs across, well under a pixel each.
-    const g = previewGeometry({ pitchMm: 1.2, regionWidthCm: 100, ...canvas });
+    const g = previewGeometry({ pitchMm: 1.2, regionWidthCm: 400, ...canvas });
     expect(g.ledPx).toBeLessThan(1);
     expect(g.gapPx).toBe(0);
   });
 
   it("reports the real size it actually shows, rounded to whole LEDs", () => {
     const g = previewGeometry({ pitchMm: 4, ...patch });
-    expect(g.cols).toBe(25);
-    expect(g.widthCm).toBeCloseTo(10, 6);
+    // The figures a module's spec sheet carries.
+    expect(g.cols).toBe(80);
+    expect(g.rows).toBe(40);
+    const p25 = previewGeometry({ pitchMm: 2.5, ...patch });
+    expect(p25.cols).toBe(128);
+    expect(p25.rows).toBe(64);
+    expect(g.widthCm).toBeCloseTo(MODULE_WIDTH_CM, 6);
+    expect(g.heightCm).toBeCloseTo(MODULE_HEIGHT_CM, 6);
     expect(g.heightCm).toBeCloseTo((g.rows * 4) / 10, 6);
   });
 });
@@ -111,7 +119,7 @@ describe("the emitter model", () => {
 
   it("fades a sub-pixel gap instead of forcing it to a whole pixel", () => {
     const g = previewGeometry({ pitchMm: 1.2, ...patch });
-    // 0.2 mm of 1.2 mm, on a 3.7 px LED, is under a pixel wide.
+    // 0.2 mm of 1.2 mm, on a 4.5 px LED, is under a pixel wide.
     expect(g.gapPx).toBe(1);
     expect(g.gapAlpha).toBeGreaterThan(0);
     expect(g.gapAlpha).toBeLessThan(1);

@@ -1,36 +1,41 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { useStore } from "../../state/store";
-import { effectivePitchMm, layerSizeCm } from "../../lib/cabinets";
+import { createPortal } from "react-dom";
+import { useStore } from "../state/store";
+import { effectivePitchMm, layerSizeCm } from "../lib/cabinets";
 import {
-  PATCH_WIDTH_CM,
+  MODULE_HEIGHT_CM,
+  MODULE_WIDTH_CM,
   boxDownsample,
   defaultEmitterRatio,
   fillRatio,
   packageFor,
   previewGeometry,
   sourceRectFor,
-} from "../../lib/pixelPreview";
-import { screenFilter } from "../../lib/faceFilter";
-import type { Layer } from "../../types";
+} from "../lib/pixelPreview";
+import { screenFilter } from "../lib/faceFilter";
 
-const ASPECT = 9 / 16;
+const MAX_CANVAS_PX = 1400;
+const SIDE_MARGIN_PX = 80;
 
 /**
- * A hand-sized patch of the selected face, blown up until one LED covers
+ * One LED module of the selected face, at a scale where a single LED covers
  * several screen pixels.
  *
- * The arrangement view cannot answer what 1.5 mm buys over 1.8 mm — there an
- * LED is a fraction of a screen pixel and every fine pitch looks the same.
- * Here the patch is small enough that the pixel structure is real, so the
- * pitch becomes something you can see rather than a number in a table.
+ * The arrangement view cannot answer what 1.5 mm buys over 1.8 mm: there an LED
+ * is a fraction of a screen pixel, so drawing its grid gives moiré instead of
+ * structure and every fine pitch looks alike. A module blown up across the
+ * window is small enough that the pixel structure is real.
+ *
+ * It takes the window rather than the sidebar because that is what the maths
+ * demands. A 320 mm module in a 308 px column puts 1.2 mm LEDs at 1.2 px each —
+ * below the point where a grid can be drawn at all.
  */
-export default function PixelPreviewPanel() {
+export default function PixelPreview({ onClose }: { onClose: () => void }) {
   const layers = useStore((s) => s.layers);
   const selectedLayerId = useStore((s) => s.selectedLayerId);
   const defaultPitchMm = useStore((s) => s.defaultPitchMm);
   const display = useStore((s) => s.display);
 
-  const boxRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const scratchRef = useRef<HTMLCanvasElement | null>(null);
   const patchRef = useRef<HTMLCanvasElement | null>(null);
@@ -39,33 +44,30 @@ export default function PixelPreviewPanel() {
   const dragRef = useRef<{ x: number; y: number } | null>(null);
 
   const [width, setWidth] = useState(0);
-  // null follows the pitch's usual package; a number is the user overruling it.
-  const [emitterOverride, setEmitterOverride] = useState<number | null>(null);
-  const [shown, setShown] = useState<{ cols: number; rows: number; widthCm: number } | null>(null);
+  const [shown, setShown] = useState<{ cols: number; rows: number } | null>(null);
 
-  const layer: Layer | null = layers.find((l) => l.id === selectedLayerId) ?? null;
+  const layer = layers.find((l) => l.id === selectedLayerId) ?? layers[0] ?? null;
   const content = layer?.content ?? null;
   const pitchMm = layer ? effectivePitchMm(layer, defaultPitchMm) : defaultPitchMm;
-  const emitterRatio = emitterOverride ?? defaultEmitterRatio(pitchMm);
-  const emitterMm = emitterRatio * pitchMm;
-  const auto = emitterOverride === null;
-  // Named only while it is the pairing we looked up; once the ratio is dragged
-  // it is no longer that package and saying so would be a lie.
-  const packageName = auto ? packageFor(pitchMm).name : null;
+  const pack = packageFor(pitchMm);
+  const emitterRatio = defaultEmitterRatio(pitchMm);
+  const height = Math.round((width * MODULE_HEIGHT_CM) / MODULE_WIDTH_CM);
 
   useEffect(() => {
-    const el = boxRef.current;
-    if (!el) return;
-    const observer = new ResizeObserver(() => setWidth(el.clientWidth));
-    observer.observe(el);
-    setWidth(el.clientWidth);
-    return () => observer.disconnect();
-  }, [content]);
+    const measure = () =>
+      setWidth(Math.min(MAX_CANVAS_PX, Math.max(320, window.innerWidth - SIDE_MARGIN_PX)));
+    measure();
+    window.addEventListener("resize", measure);
+    return () => window.removeEventListener("resize", measure);
+  }, []);
 
-  // A different face means the old patch position means nothing.
   useEffect(() => {
-    centreRef.current = { x: 0.5, y: 0.5 };
-  }, [selectedLayerId]);
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [onClose]);
 
   const draw = useCallback(() => {
     const canvas = canvasRef.current;
@@ -73,7 +75,7 @@ export default function PixelPreviewPanel() {
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
 
-    // A live video if this face is playing one, so the patch moves with it;
+    // A live video if this face is playing one, so the module moves with it;
     // otherwise the still. Reading the element the editor already has beats
     // decoding the same file a second time.
     const live =
@@ -93,8 +95,8 @@ export default function PixelPreviewPanel() {
     const face = layerSizeCm(layer);
     const geo = previewGeometry({
       pitchMm,
-      emitterRatio,
-      regionWidthCm: PATCH_WIDTH_CM,
+      regionWidthCm: MODULE_WIDTH_CM,
+      regionHeightCm: MODULE_HEIGHT_CM,
       canvasWidthPx: canvas.width,
       canvasHeightPx: canvas.height,
     });
@@ -110,8 +112,8 @@ export default function PixelPreviewPanel() {
       fitMode: content.fitMode,
     });
 
-    // Step one: lift the patch at the content's own resolution. Clamped to the
-    // picture, with the destination shifted to match, so a patch hanging past a
+    // Step one: lift the module at the content's own resolution. Clamped to the
+    // picture, with the destination shifted to match, so a module hanging past a
     // 비율 유지 picture shows unlit LEDs rather than a stretched edge.
     const patch = (patchRef.current ??= document.createElement("canvas"));
     patch.width = Math.max(1, Math.round(rect.sw));
@@ -165,14 +167,11 @@ export default function PixelPreviewPanel() {
     ctx.filter = "none";
     ctx.imageSmoothingEnabled = true;
 
-    // Step four: the dark matrix between LEDs. Skipped when they are too small
-    // to carry a gap, because at that size it draws moiré, not structure.
+    // Step four: the dark matrix between LEDs, inclusive of both ends — the
+    // half-gaps at the border belong to the LEDs just outside the module.
     if (geo.gapPx > 0) {
       ctx.globalAlpha = geo.gapAlpha;
       ctx.fillStyle = "#05070a";
-      // Inclusive of both ends: the half-gaps at the border belong to the LEDs
-      // sitting just outside the patch. Skipping them left the picture a few
-      // points brighter than the fill ratio printed beside it.
       for (let c = 0; c <= geo.cols; c++) {
         ctx.fillRect(c * geo.ledPx - geo.gapPx / 2, 0, geo.gapPx, canvas.height);
       }
@@ -183,11 +182,11 @@ export default function PixelPreviewPanel() {
     }
 
     setShown((prev) =>
-      prev && prev.cols === geo.cols && prev.rows === geo.rows && prev.widthCm === geo.widthCm
+      prev && prev.cols === geo.cols && prev.rows === geo.rows
         ? prev
-        : { cols: geo.cols, rows: geo.rows, widthCm: geo.widthCm }
+        : { cols: geo.cols, rows: geo.rows }
     );
-  }, [layer, content, width, pitchMm, emitterRatio, display]);
+  }, [layer, content, width, pitchMm, display]);
 
   // The still is loaded once and kept. A video is read live off the editor's
   // own element, so it needs nothing here.
@@ -213,7 +212,7 @@ export default function PixelPreviewPanel() {
     draw();
   }, [draw]);
 
-  // Only a playing video needs repainting; a still patch is drawn once and
+  // Only a playing video needs repainting; a still module is drawn once and
   // stays right until something about it changes.
   useEffect(() => {
     if (content?.kind !== "video") return;
@@ -224,8 +223,6 @@ export default function PixelPreviewPanel() {
     return () => cancelAnimationFrame(frame);
   }, [content?.kind, draw]);
 
-  const height = Math.round(width * ASPECT);
-
   const onPointerDown = (e: React.PointerEvent) => {
     (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
     dragRef.current = { x: e.clientX, y: e.clientY };
@@ -233,10 +230,10 @@ export default function PixelPreviewPanel() {
 
   const onPointerMove = (e: React.PointerEvent) => {
     const from = dragRef.current;
-    if (!from || !layer || !shown || width <= 0) return;
+    if (!from || !layer || width <= 0) return;
     const face = layerSizeCm(layer);
-    // Drag moves the patch by what the pointer covered, in wall terms.
-    const cmPerPx = shown.widthCm / width;
+    // Drag moves the module by what the pointer covered, in wall terms.
+    const cmPerPx = MODULE_WIDTH_CM / width;
     const c = centreRef.current;
     centreRef.current = {
       x: Math.min(1, Math.max(0, c.x - ((e.clientX - from.x) * cmPerPx) / face.widthCm)),
@@ -251,61 +248,54 @@ export default function PixelPreviewPanel() {
     dragRef.current = null;
   };
 
-  return (
-    <section className="panel">
-      <h2>픽셀 미리보기</h2>
+  return createPortal(
+    <div className="pixel-overlay">
+      <header className="pixel-head">
+        <div>
+          <h2>픽셀 미리보기</h2>
+          <p className="muted small">
+            {layer ? layer.label : "레이어 없음"} · LED 모듈 한 장 ({MODULE_WIDTH_CM} ×{" "}
+            {MODULE_HEIGHT_CM} cm)
+          </p>
+        </div>
+        <button className="btn btn-ghost btn-sm" onClick={onClose}>
+          닫기
+        </button>
+      </header>
 
-      {!layer ? (
-        <p className="muted small">레이어를 선택하면 실제 픽셀 구조를 볼 수 있습니다.</p>
-      ) : !content ? (
-        <p className="muted small">콘텐츠를 올리면 실제 픽셀 구조를 볼 수 있습니다.</p>
+      {!content ? (
+        <p className="muted">이 레이어에 콘텐츠를 올리면 실제 픽셀 구조를 볼 수 있습니다.</p>
       ) : (
         <>
-          <div className="pixel-preview" ref={boxRef}>
-            {width > 0 && (
-              <canvas
-                ref={canvasRef}
-                width={width}
-                height={height}
-                style={{ width, height }}
-                onPointerDown={onPointerDown}
-                onPointerMove={onPointerMove}
-                onPointerUp={onPointerUp}
-                onPointerCancel={onPointerUp}
-              />
-            )}
+          <div className="pixel-stage">
+            <canvas
+              ref={canvasRef}
+              width={width}
+              height={height}
+              style={{ width, height }}
+              onPointerDown={onPointerDown}
+              onPointerMove={onPointerMove}
+              onPointerUp={onPointerUp}
+              onPointerCancel={onPointerUp}
+            />
           </div>
 
-          <label
-            className="slider-row"
-            title="한 픽셀에서 실제로 빛을 내는 부분입니다. 퍼센트는 업계 표기와 같은 면적 기준(발광부÷피치의 제곱)입니다. 같은 피치라도 공급사가 어떤 패키지를 썼느냐에 따라 다르므로 조정할 수 있습니다. 두 번 누르면 자동으로 돌아갑니다."
-          >
+          <footer className="pixel-foot muted small">
+            <span>픽셀 피치 {pitchMm} mm</span>
             <span>
-              발광부
-              <em>
-                {emitterMm.toFixed(1)} mm{packageName ? " · " + packageName : ""} · 충전율{" "}
-                {Math.round(fillRatio(emitterRatio) * 100)}%
-              </em>
+              {pack.name} · 발광부 {pack.emitterMm} mm
             </span>
-            <input
-              type="range"
-              min={0.3}
-              max={1}
-              step={0.02}
-              value={emitterRatio}
-              onChange={(e) => setEmitterOverride(Number(e.target.value))}
-              onDoubleClick={() => setEmitterOverride(null)}
-            />
-          </label>
-
-          {shown && (
-            <p className="muted small">
-              벽 {shown.widthCm.toFixed(1)} cm 폭 · 픽셀 피치 {pitchMm} mm · LED {shown.cols} ×{" "}
-              {shown.rows}개 · 끌어서 이동
-            </p>
-          )}
+            <span>충전율 {Math.round(fillRatio(emitterRatio) * 100)}%</span>
+            {shown && (
+              <span>
+                모듈당 LED {shown.cols} × {shown.rows}
+              </span>
+            )}
+            <span>끌어서 이동</span>
+          </footer>
         </>
       )}
-    </section>
+    </div>,
+    document.body
   );
 }

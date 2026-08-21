@@ -14,8 +14,14 @@ import type { FitMode } from "../types";
 /** Below this, an LED is too small to draw a gap around without moiré. */
 const MIN_LED_PX_FOR_GRID = 3;
 
-/** The patch is always this wide, so the only thing that changes is the pitch. */
-export const PATCH_WIDTH_CM = 10;
+/**
+ * One standard LED module, 320 x 160 mm. The patch is always exactly this, so
+ * the only thing that changes between two previews is the pitch — and the LED
+ * count that comes out is the number printed on a module's spec sheet: 128 x 64
+ * at 2.5 mm, 80 x 40 at 4 mm. A GOB cabinet is six of them, 2 across by 3 down.
+ */
+export const MODULE_WIDTH_CM = 32;
+export const MODULE_HEIGHT_CM = 16;
 
 /**
  * The lamp that sits at each pixel centre.
@@ -90,6 +96,8 @@ export function previewGeometry(opts: {
   pitchMm: number;
   /** how much wall the patch should span */
   regionWidthCm: number;
+  /** how much wall the patch spans vertically; falls back to the canvas shape */
+  regionHeightCm?: number;
   canvasWidthPx: number;
   canvasHeightPx: number;
   /** light-emitting share of the pitch; defaults to the table above */
@@ -100,7 +108,12 @@ export function previewGeometry(opts: {
 
   const cols = Math.max(1, Math.round((regionWidthCm * 10) / pitchMm));
   const ledPx = canvasWidthPx / cols;
-  const rows = Math.max(1, Math.floor(canvasHeightPx / ledPx));
+  // Taken from the region when there is one, so the count is the module's own
+  // and not a hostage to how the canvas rounded.
+  const rows =
+    opts.regionHeightCm !== undefined
+      ? Math.max(1, Math.round((opts.regionHeightCm * 10) / pitchMm))
+      : Math.max(1, Math.floor(canvasHeightPx / ledPx));
 
   const rawGap = ledPx * (1 - emitterRatio);
   const tooSmall = ledPx < MIN_LED_PX_FOR_GRID;
