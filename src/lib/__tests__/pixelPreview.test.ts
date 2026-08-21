@@ -3,6 +3,8 @@ import {
   PATCH_WIDTH_CM,
   boxDownsample,
   defaultEmitterRatio,
+  fillRatio,
+  packageFor,
   previewGeometry,
   sourceRectFor,
 } from "../pixelPreview";
@@ -52,11 +54,49 @@ describe("previewGeometry", () => {
 });
 
 describe("the emitter model", () => {
+  it("pairs each pitch with the package the trade actually puts on it", () => {
+    const pairs: [number, string, number][] = [
+      [1.2, "SMD1010", 1.0],
+      [1.5, "SMD1212", 1.2],
+      [1.8, "SMD1515", 1.5],
+      [2.5, "SMD2020", 2.0],
+      [3.0, "SMD2020", 2.0],
+      [4.0, "SMD2020", 2.0],
+    ];
+    for (const [pitchMm, name, emitterMm] of pairs) {
+      expect(packageFor(pitchMm)).toEqual({ name, emitterMm });
+    }
+  });
+
   it("keeps the lamp size while the pitch grows, so the dark gap widens", () => {
     // The same 2.0 mm package serves 2.5, 3 and 4 mm boards.
     expect(defaultEmitterRatio(2.5) * 2.5).toBeCloseTo(2.0, 6);
     expect(defaultEmitterRatio(3) * 3).toBeCloseTo(2.0, 6);
     expect(defaultEmitterRatio(4) * 4).toBeCloseTo(2.0, 6);
+  });
+
+  it("quotes fill as an area, the way the trade does", () => {
+    // The published figure this is checked against: an SMD2121 on a 5 mm board
+    // is sold as a 17% fill, and (2.1 / 5)² is 17.6%.
+    expect(fillRatio(defaultEmitterRatio(5))).toBeCloseTo(0.176, 3);
+
+    expect(fillRatio(defaultEmitterRatio(1.2))).toBeCloseTo(0.694, 3);
+    expect(fillRatio(defaultEmitterRatio(1.5))).toBeCloseTo(0.64, 3);
+    expect(fillRatio(defaultEmitterRatio(1.8))).toBeCloseTo(0.694, 3);
+    expect(fillRatio(defaultEmitterRatio(2.5))).toBeCloseTo(0.64, 3);
+    expect(fillRatio(defaultEmitterRatio(3))).toBeCloseTo(0.444, 3);
+    expect(fillRatio(defaultEmitterRatio(4))).toBeCloseTo(0.25, 3);
+  });
+
+  it("is not monotonic, because package families step", () => {
+    // 4 mm on an SMD2020 is darker than 5 mm on an SMD2121: stretching a family
+    // to its coarsest pitch costs more fill than moving up a size.
+    expect(fillRatio(defaultEmitterRatio(4))).toBeGreaterThan(
+      fillRatio(defaultEmitterRatio(5))
+    );
+    expect(fillRatio(defaultEmitterRatio(1.8))).toBeGreaterThan(
+      fillRatio(defaultEmitterRatio(1.5))
+    );
   });
 
   it("draws a coarse pitch darker than a fine one, not the other way round", () => {

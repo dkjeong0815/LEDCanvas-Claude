@@ -5,6 +5,8 @@ import {
   PATCH_WIDTH_CM,
   boxDownsample,
   defaultEmitterRatio,
+  fillRatio,
+  packageFor,
   previewGeometry,
   sourceRectFor,
 } from "../../lib/pixelPreview";
@@ -45,6 +47,11 @@ export default function PixelPreviewPanel() {
   const content = layer?.content ?? null;
   const pitchMm = layer ? effectivePitchMm(layer, defaultPitchMm) : defaultPitchMm;
   const emitterRatio = emitterOverride ?? defaultEmitterRatio(pitchMm);
+  const emitterMm = emitterRatio * pitchMm;
+  const auto = emitterOverride === null;
+  // Named only while it is the pairing we looked up; once the ratio is dragged
+  // it is no longer that package and saying so would be a lie.
+  const packageName = auto ? packageFor(pitchMm).name : null;
 
   useEffect(() => {
     const el = boxRef.current;
@@ -163,10 +170,13 @@ export default function PixelPreviewPanel() {
     if (geo.gapPx > 0) {
       ctx.globalAlpha = geo.gapAlpha;
       ctx.fillStyle = "#05070a";
-      for (let c = 1; c < geo.cols; c++) {
+      // Inclusive of both ends: the half-gaps at the border belong to the LEDs
+      // sitting just outside the patch. Skipping them left the picture a few
+      // points brighter than the fill ratio printed beside it.
+      for (let c = 0; c <= geo.cols; c++) {
         ctx.fillRect(c * geo.ledPx - geo.gapPx / 2, 0, geo.gapPx, canvas.height);
       }
-      for (let r = 1; r < geo.rows; r++) {
+      for (let r = 0; r <= geo.rows; r++) {
         ctx.fillRect(0, r * geo.ledPx - geo.gapPx / 2, canvas.width, geo.gapPx);
       }
       ctx.globalAlpha = 1;
@@ -268,13 +278,13 @@ export default function PixelPreviewPanel() {
 
           <label
             className="slider-row"
-            title="한 픽셀에서 실제로 빛을 내는 부분의 크기입니다. 피치가 같아도 제품마다 다르므로, 쓰시는 제품에 맞게 조정하세요."
+            title="한 픽셀에서 실제로 빛을 내는 부분입니다. 퍼센트는 업계 표기와 같은 면적 기준(발광부÷피치의 제곱)입니다. 같은 피치라도 공급사가 어떤 패키지를 썼느냐에 따라 다르므로 조정할 수 있습니다. 두 번 누르면 자동으로 돌아갑니다."
           >
             <span>
               발광부
               <em>
-                {(emitterRatio * pitchMm).toFixed(1)} mm · {Math.round(emitterRatio * 100)}%
-                {emitterOverride === null ? " 자동" : ""}
+                {emitterMm.toFixed(1)} mm{packageName ? " · " + packageName : ""} · 충전율{" "}
+                {Math.round(fillRatio(emitterRatio) * 100)}%
               </em>
             </span>
             <input

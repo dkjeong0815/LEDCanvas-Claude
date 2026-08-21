@@ -18,36 +18,51 @@ const MIN_LED_PX_FOR_GRID = 3;
 export const PATCH_WIDTH_CM = 10;
 
 /**
- * Light-emitting area for a given pitch, in mm.
+ * The lamp that sits at each pixel centre.
  *
- * Pitch is the distance between pixel centres, and the lamp sitting at each
- * centre does not grow in step with it: the same 2.0 mm package serves 2.5, 3
- * and 4 mm boards. So the dark gap takes up a larger share as the pitch
- * coarsens, which is why a coarse wall looks like dots up close and a fine one
- * looks like a surface. Drawing the gap as a fixed fraction of the pitch —
- * which this used to do — hides exactly the thing the preview is for.
+ * Pitch is the distance between centres, and the package at each centre does
+ * not grow in step with it: one SMD2020 serves 2.5, 3 and 4 mm boards alike.
+ * So the dark gap takes a larger share as the pitch coarsens within a package
+ * family, which is why a coarse wall reads as dots up close and a fine one
+ * reads as a surface. Drawing the gap as a fixed fraction of the pitch — which
+ * this used to do — hides the very thing the preview exists for.
  *
- * Typical pairings, not a spec: the slider exists because the real package
- * depends on the product in hand.
+ * Pairings are the mainstream ones, not a specification: which package a board
+ * actually carries is the supplier's choice, which is why the ratio can be
+ * overridden. Note the run is not monotonic — a family stretched to its
+ * coarsest pitch is darker than the next family's finest.
  */
-const EMITTER_MM: [pitchMm: number, emitterMm: number][] = [
-  [1.2, 1.0],
-  [1.5, 1.2],
-  [1.8, 1.5],
-  [2.5, 2.0],
-  [3.0, 2.0],
-  [4.0, 2.0],
+const PACKAGES: { pitchMm: number; name: string; emitterMm: number }[] = [
+  { pitchMm: 0.9, name: "SMD0808", emitterMm: 0.8 },
+  { pitchMm: 1.2, name: "SMD1010", emitterMm: 1.0 },
+  { pitchMm: 1.5, name: "SMD1212", emitterMm: 1.2 },
+  { pitchMm: 1.8, name: "SMD1515", emitterMm: 1.5 },
+  { pitchMm: 2.5, name: "SMD2020", emitterMm: 2.0 },
+  { pitchMm: 3.0, name: "SMD2020", emitterMm: 2.0 },
+  { pitchMm: 4.0, name: "SMD2020", emitterMm: 2.0 },
+  { pitchMm: 5.0, name: "SMD2121", emitterMm: 2.1 },
 ];
 
-export function defaultEmitterRatio(pitchMm: number): number {
-  let chosen = EMITTER_MM[0];
-  for (const entry of EMITTER_MM) {
-    if (entry[0] <= pitchMm + 1e-9) chosen = entry;
+export function packageFor(pitchMm: number): { name: string; emitterMm: number } {
+  let chosen = PACKAGES[0];
+  for (const entry of PACKAGES) {
+    if (entry.pitchMm <= pitchMm + 1e-9) chosen = entry;
   }
-  // Past the table, hold the coarsest pairing's ratio rather than inventing a
-  // package size for a pitch nobody listed.
-  const ratio = chosen[1] / chosen[0];
-  return Math.min(1, Math.max(0.2, pitchMm > EMITTER_MM[EMITTER_MM.length - 1][0] ? ratio : chosen[1] / pitchMm));
+  return { name: chosen.name, emitterMm: chosen.emitterMm };
+}
+
+export function defaultEmitterRatio(pitchMm: number): number {
+  const { emitterMm } = packageFor(pitchMm);
+  return Math.min(1, emitterMm / pitchMm);
+}
+
+/**
+ * Share of the pixel's area that emits — the industry's "fill ratio", and an
+ * area figure, not a linear one. The check: an SMD2121 on a 5 mm board is
+ * quoted at 17%, and (2.1 / 5)² is 17.6%.
+ */
+export function fillRatio(emitterRatio: number): number {
+  return emitterRatio * emitterRatio;
 }
 
 export interface PreviewGeometry {
