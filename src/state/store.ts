@@ -11,7 +11,12 @@ import type {
   RectCm,
   ReferenceKind,
 } from "../types";
-import { CABINETS, DEFAULT_PIXEL_PITCH, layerSizeCm } from "../lib/cabinets";
+import {
+  CABINETS,
+  DEFAULT_CABINET_TYPE,
+  DEFAULT_PIXEL_PITCH,
+  layerSizeCm,
+} from "../lib/cabinets";
 import { clampToBounds, findFreeSpot, fitsInBounds, overlapsAny } from "../lib/geometry";
 import { calibrate, calibrateFailureMessage } from "../lib/calibrate";
 import { A4_LONG_CM, A4_SHORT_CM, resolveA4Size } from "../lib/detectSheet";
@@ -66,8 +71,6 @@ interface State {
 
   layers: Layer[];
   selectedLayerId: string | null;
-  defaultCabinetType: CabinetType;
-  defaultPitchMm: number;
   nextLayerNumber: number;
 
   /** shown in the title block of printed sheets */
@@ -97,7 +100,7 @@ interface State {
   nudgeCols: (id: string, delta: number) => boolean;
   nudgeRows: (id: string, delta: number) => boolean;
   setLayerCabinetType: (id: string, type: CabinetType) => boolean;
-  setLayerPitch: (id: string, mm: number | undefined) => void;
+  setLayerPitch: (id: string, mm: number) => void;
   setLayerContent: (
     id: string,
     url: string,
@@ -108,8 +111,6 @@ interface State {
   ) => void;
   setLayerFitMode: (id: string, fitMode: FitMode) => void;
   clearLayerContent: (id: string) => void;
-  setDefaultPitch: (mm: number) => void;
-  setDefaultCabinetType: (t: CabinetType) => void;
 }
 
 export const DEFAULT_DISPLAY: DisplayOptions = {
@@ -143,8 +144,6 @@ export const useStore = create<State>((set, get) => ({
 
   layers: [],
   selectedLayerId: null,
-  defaultCabinetType: "gob",
-  defaultPitchMm: DEFAULT_PIXEL_PITCH,
   nextLayerNumber: 1,
 
   projectName: "",
@@ -231,7 +230,14 @@ export const useStore = create<State>((set, get) => ({
   addLayer: () => {
     const s = get();
     if (!s.calibration) return;
-    const spec = CABINETS[s.defaultCabinetType];
+    // A new face copies the one added before it. Walls are usually built from
+    // one product, so repeating the last choice is right far more often than
+    // any fixed default — and it leaves no setting that reaches back and
+    // changes faces already placed.
+    const previous = s.layers[s.layers.length - 1];
+    const cabinetType = previous?.cabinetType ?? DEFAULT_CABINET_TYPE;
+    const pixelPitchMm = previous?.pixelPitchMm ?? DEFAULT_PIXEL_PITCH;
+    const spec = CABINETS[cabinetType];
     const bounds = wallBounds(s.calibration);
     const spot = findFreeSpot(spec.widthCm, spec.heightCm, bounds, s.layers.map(layerRect));
     if (!spot) return;
@@ -239,7 +245,8 @@ export const useStore = create<State>((set, get) => ({
     const layer: Layer = {
       id: crypto.randomUUID(),
       label: `L${s.nextLayerNumber}`,
-      cabinetType: s.defaultCabinetType,
+      cabinetType,
+      pixelPitchMm,
       cols: 1,
       rows: 1,
       xCm: spot.xCm,
@@ -346,8 +353,6 @@ export const useStore = create<State>((set, get) => ({
 
   setDisplay: (patch) => set((s) => ({ display: { ...s.display, ...patch } })),
 
-  setDefaultPitch: (mm) => set({ defaultPitchMm: mm }),
-  setDefaultCabinetType: (t) => set({ defaultCabinetType: t }),
 }));
 
 export const A4_LABEL = `A4 ${A4_SHORT_CM} × ${A4_LONG_CM} cm`;

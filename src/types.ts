@@ -86,8 +86,12 @@ export interface Layer {
   id: string;
   label: string;
   cabinetType: CabinetType;
-  /** mm; undefined = inherit the workspace default */
-  pixelPitchMm?: number;
+  /**
+   * mm. Every layer carries its own; there is no workspace default to inherit,
+   * because "follows the default" was a third state that changed a layer's
+   * resolution without the layer being touched.
+   */
+  pixelPitchMm: number;
   cols: number;
   rows: number;
   /** top-left corner in wall-cm coordinates */

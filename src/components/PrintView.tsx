@@ -4,7 +4,6 @@ import { useStore, wallBounds } from "../state/store";
 import {
   CABINETS,
   cabinetCount,
-  effectivePitchMm,
   layerResolutionPx,
   layerSizeCm,
 } from "../lib/cabinets";
@@ -25,7 +24,6 @@ export default function PrintView({ onClose }: { onClose: () => void }) {
   const calibration = useStore((s) => s.calibration);
   const background = useStore((s) => s.background);
   const layers = useStore((s) => s.layers);
-  const defaultPitchMm = useStore((s) => s.defaultPitchMm);
   const projectName = useStore((s) => s.projectName);
   const display = useStore((s) => s.display);
   const setProjectName = useStore((s) => s.setProjectName);
@@ -106,14 +104,14 @@ export default function PrintView({ onClose }: { onClose: () => void }) {
 
   const rows = layers.map((l) => {
     const size = layerSizeCm(l);
-    const whole = layerResolutionPx(l, defaultPitchMm);
+    const whole = layerResolutionPx(l);
     return {
       id: l.id,
       label: l.label,
       cabinet: CABINETS[l.cabinetType].label,
       grid: `${l.cols} × ${l.rows}`,
       count: cabinetCount(l),
-      pitch: effectivePitchMm(l, defaultPitchMm),
+      pitch: l.pixelPitchMm,
       size: `${size.widthCm.toFixed(1)} × ${size.heightCm.toFixed(1)}`,
       // The whole layer, cabinet array included.
       resolution: `${whole.widthPx} × ${whole.heightPx}`,
@@ -207,7 +205,6 @@ export default function PrintView({ onClose }: { onClose: () => void }) {
               LED 면 {layers.length}개 · 캐비닛 합계 {totals.cabinets}개 · 총 면적{" "}
               {totals.areaM2.toFixed(2)} m²
             </span>
-            <span>기본 픽셀 피치 {defaultPitchMm} mm</span>
           </footer>
         </section>
 

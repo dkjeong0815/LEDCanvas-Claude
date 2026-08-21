@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useStore } from "../state/store";
-import { effectivePitchMm, layerSizeCm } from "../lib/cabinets";
+import { DEFAULT_PIXEL_PITCH, layerSizeCm } from "../lib/cabinets";
 import {
   MODULE_HEIGHT_CM,
   MODULE_WIDTH_CM,
@@ -33,7 +33,6 @@ const SIDE_MARGIN_PX = 80;
 export default function PixelPreview({ onClose }: { onClose: () => void }) {
   const layers = useStore((s) => s.layers);
   const selectedLayerId = useStore((s) => s.selectedLayerId);
-  const defaultPitchMm = useStore((s) => s.defaultPitchMm);
   const display = useStore((s) => s.display);
 
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -48,7 +47,7 @@ export default function PixelPreview({ onClose }: { onClose: () => void }) {
 
   const layer = layers.find((l) => l.id === selectedLayerId) ?? layers[0] ?? null;
   const content = layer?.content ?? null;
-  const pitchMm = layer ? effectivePitchMm(layer, defaultPitchMm) : defaultPitchMm;
+  const pitchMm = layer?.pixelPitchMm ?? DEFAULT_PIXEL_PITCH;
   const pack = packageFor(pitchMm);
   const emitterRatio = defaultEmitterRatio(pitchMm);
   const height = Math.round((width * MODULE_HEIGHT_CM) / MODULE_WIDTH_CM);

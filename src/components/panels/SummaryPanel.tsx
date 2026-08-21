@@ -1,25 +1,23 @@
 import { useStore } from "../../state/store";
 import {
   cabinetCount,
-  effectivePitchMm,
   layerResolutionPx,
   layerSizeCm,
 } from "../../lib/cabinets";
 
 export default function SummaryPanel() {
   const layers = useStore((s) => s.layers);
-  const defaultPitchMm = useStore((s) => s.defaultPitchMm);
 
   if (layers.length === 0) return null;
 
   const rows = layers.map((l) => {
     const size = layerSizeCm(l);
-    const whole = layerResolutionPx(l, defaultPitchMm);
+    const whole = layerResolutionPx(l);
     return {
       id: l.id,
       label: l.label,
       cabinets: cabinetCount(l),
-      pitch: effectivePitchMm(l, defaultPitchMm),
+      pitch: l.pixelPitchMm,
       size: `${size.widthCm.toFixed(0)} × ${size.heightCm.toFixed(0)}`,
       resolution: `${whole.widthPx} × ${whole.heightPx}`,
       fullResolution: (whole.widthPx * whole.heightPx).toLocaleString("ko-KR"),
