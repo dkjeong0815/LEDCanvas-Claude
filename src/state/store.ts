@@ -119,9 +119,11 @@ export const DEFAULT_DISPLAY: DisplayOptions = {
   // and starts reading as a black frame around the picture.
   shadowAmount: 0.7,
   glow: 0.5,
+  screen: 0.4,
 };
 
 export const MAX_GLOW = 1.2;
+export const MAX_SCREEN = 1.5;
 export const MAX_SHADOW_AMOUNT = 2.5;
 
 const initialCalibrationState = {

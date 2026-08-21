@@ -1,4 +1,4 @@
-import { MAX_GLOW, MAX_SHADOW_AMOUNT, useStore } from "../../state/store";
+import { MAX_GLOW, MAX_SCREEN, MAX_SHADOW_AMOUNT, useStore } from "../../state/store";
 
 /**
  * Three switches, and every explanation lives in a tooltip. What the options do
@@ -51,6 +51,24 @@ export default function DisplayPanel() {
           />
         </label>
       )}
+
+      <label
+        className="slider-row"
+        title="LED는 스스로 빛을 내서 벽에 걸린 인쇄물과 다르게 보입니다. 올리면 밝아지고, 검은 부분은 더 깊어지고, 색이 진해집니다. 0이면 원본 그대로입니다."
+      >
+        <span>
+          화면 밝기
+          <em>{display.screen.toFixed(2)}</em>
+        </span>
+        <input
+          type="range"
+          min={0}
+          max={MAX_SCREEN}
+          step={0.05}
+          value={display.screen}
+          onChange={(e) => setDisplay({ screen: Number(e.target.value) })}
+        />
+      </label>
 
       <label
         className="slider-row"

@@ -117,4 +117,11 @@ export interface DisplayOptions {
   shadowAmount: number;
   /** strength of the content-coloured light spill */
   glow: number;
+  /**
+   * How much the face is driven like a lit panel rather than printed paper.
+   * 0 leaves the content exactly as supplied; higher lifts it, deepens its
+   * blacks and widens its colour, which is what separates an emissive screen
+   * from a photograph hanging on a wall.
+   */
+  screen: number;
 }

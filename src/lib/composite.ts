@@ -19,7 +19,9 @@ function drawFitted(
   y: number,
   w: number,
   h: number,
-  fit: "contain" | "cover"
+  fit: "contain" | "cover",
+  /** CSS filter string, matching what the editor puts on the element */
+  filter?: string
 ) {
   const imgRatio = img.naturalWidth / img.naturalHeight;
   const boxRatio = w / h;
@@ -33,6 +35,9 @@ function drawFitted(
   ctx.clip();
   ctx.fillStyle = "#05070a";
   ctx.fillRect(x, y, w, h);
+  // Set after the backing fill so the filter touches the picture only, the way
+  // a CSS filter on the content element does.
+  if (filter) ctx.filter = filter;
   ctx.drawImage(img, x + (w - drawW) / 2, y + (h - drawH) / 2, drawW, drawH);
   ctx.restore();
 }
@@ -42,6 +47,16 @@ export interface CompositeOptions {
   showCabinetGrid?: boolean;
   /** annotations, shadow and glow — the same options the editor renders with */
   display: DisplayOptions;
+}
+
+/**
+ * Mirrors screenFilter() in WorkspaceView, so the PNG shows the panel at the
+ * brightness the arrangement was judged at.
+ */
+function screenFilter(display: DisplayOptions) {
+  if (!(display.screen > 0)) return undefined;
+  const a = display.screen;
+  return `brightness(${1 + a * 0.45}) contrast(${1 + a * 0.35}) saturate(${1 + a * 0.3})`;
 }
 
 /**
@@ -178,7 +193,7 @@ export async function renderComposite(
       try {
         // The still, not the video: a PNG is one frame, same as the sheet.
         const img = await loadImage(layer.content.posterUrl);
-        drawFitted(ctx, img, x, y, w, h, layer.content.fitMode);
+        drawFitted(ctx, img, x, y, w, h, layer.content.fitMode, screenFilter(opts.display));
       } catch {
         ctx.fillStyle = "#05070a";
         ctx.fillRect(x, y, w, h);

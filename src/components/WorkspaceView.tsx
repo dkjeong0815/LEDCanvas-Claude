@@ -71,6 +71,25 @@ function panelGlow(widthPx: number, display: DisplayOptions, glowColor?: string)
   ].join(", ");
 }
 
+/**
+ * Drives the content like a lit panel instead of printed paper.
+ *
+ * Brightness alone just washes the picture out. What actually reads as
+ * self-lit is the contrast: an LED's black stays black while its highlights
+ * outrun anything reflective beside them. Saturation follows because a panel's
+ * colour gamut is wider than a photograph of a wall.
+ *
+ * It is a compositor filter, so a video costs the same as a still — no reason
+ * to treat the two differently here.
+ */
+function screenFilter(display: DisplayOptions) {
+  if (!(display.screen > 0)) return undefined;
+  const a = display.screen;
+  return `brightness(${(1 + a * 0.45).toFixed(3)}) contrast(${(1 + a * 0.35).toFixed(
+    3
+  )}) saturate(${(1 + a * 0.3).toFixed(3)})`;
+}
+
 export default function WorkspaceView({
   calibration,
   layers,
@@ -130,6 +149,7 @@ export default function WorkspaceView({
         const box = boxFor(layer.xCm, layer.yCm, widthCm, heightCm);
         const shade = panelShadow(box.width, display);
         const glow = panelGlow(box.width, display, layer.content?.glowColor);
+        const lit = screenFilter(display);
         return (
           <Fragment key={layer.id}>
             {/* Both ride on their own elements under the face — the face
@@ -167,7 +187,7 @@ export default function WorkspaceView({
                   className="layer-content"
                   src={layer.content.posterUrl}
                   alt=""
-                  style={{ objectFit: layer.content.fitMode }}
+                  style={{ objectFit: layer.content.fitMode, filter: lit }}
                   draggable={false}
                 />
               ) : (
@@ -175,7 +195,7 @@ export default function WorkspaceView({
                   className="layer-content"
                   src={layer.content.url}
                   poster={layer.content.posterUrl}
-                  style={{ objectFit: layer.content.fitMode }}
+                  style={{ objectFit: layer.content.fitMode, filter: lit }}
                   autoPlay
                   loop
                   muted
