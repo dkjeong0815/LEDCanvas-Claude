@@ -14,14 +14,58 @@ import type { FitMode } from "../types";
 /** Below this, an LED is too small to draw a gap around without moiré. */
 const MIN_LED_PX_FOR_GRID = 3;
 
+/** The patch is always this wide, so the only thing that changes is the pitch. */
+export const PATCH_WIDTH_CM = 10;
+
+/**
+ * Light-emitting area for a given pitch, in mm.
+ *
+ * Pitch is the distance between pixel centres, and the lamp sitting at each
+ * centre does not grow in step with it: the same 2.0 mm package serves 2.5, 3
+ * and 4 mm boards. So the dark gap takes up a larger share as the pitch
+ * coarsens, which is why a coarse wall looks like dots up close and a fine one
+ * looks like a surface. Drawing the gap as a fixed fraction of the pitch —
+ * which this used to do — hides exactly the thing the preview is for.
+ *
+ * Typical pairings, not a spec: the slider exists because the real package
+ * depends on the product in hand.
+ */
+const EMITTER_MM: [pitchMm: number, emitterMm: number][] = [
+  [1.2, 1.0],
+  [1.5, 1.2],
+  [1.8, 1.5],
+  [2.5, 2.0],
+  [3.0, 2.0],
+  [4.0, 2.0],
+];
+
+export function defaultEmitterRatio(pitchMm: number): number {
+  let chosen = EMITTER_MM[0];
+  for (const entry of EMITTER_MM) {
+    if (entry[0] <= pitchMm + 1e-9) chosen = entry;
+  }
+  // Past the table, hold the coarsest pairing's ratio rather than inventing a
+  // package size for a pitch nobody listed.
+  const ratio = chosen[1] / chosen[0];
+  return Math.min(1, Math.max(0.2, pitchMm > EMITTER_MM[EMITTER_MM.length - 1][0] ? ratio : chosen[1] / pitchMm));
+}
+
 export interface PreviewGeometry {
   /** LEDs across and down the patch */
   cols: number;
   rows: number;
   /** screen px per LED */
   ledPx: number;
-  /** dark gap drawn between LEDs, in screen px; 0 when they are too small */
+  /** dark gap between LEDs, in screen px; 0 when they are too small to draw */
   gapPx: number;
+  /**
+   * How solid to draw that gap. A gap thinner than a screen pixel is drawn one
+   * pixel wide and faded to its true coverage — forcing it to a full pixel is
+   * what made the finest pitch look the gappiest, the exact inversion of life.
+   */
+  gapAlpha: number;
+  /** light-emitting share of the pitch, as used */
+  emitterRatio: number;
   /** the real size actually shown, after rounding to whole LEDs */
   widthCm: number;
   heightCm: number;
@@ -33,20 +77,26 @@ export function previewGeometry(opts: {
   regionWidthCm: number;
   canvasWidthPx: number;
   canvasHeightPx: number;
+  /** light-emitting share of the pitch; defaults to the table above */
+  emitterRatio?: number;
 }): PreviewGeometry {
   const { pitchMm, regionWidthCm, canvasWidthPx, canvasHeightPx } = opts;
+  const emitterRatio = opts.emitterRatio ?? defaultEmitterRatio(pitchMm);
 
   const cols = Math.max(1, Math.round((regionWidthCm * 10) / pitchMm));
   const ledPx = canvasWidthPx / cols;
   const rows = Math.max(1, Math.floor(canvasHeightPx / ledPx));
 
+  const rawGap = ledPx * (1 - emitterRatio);
+  const tooSmall = ledPx < MIN_LED_PX_FOR_GRID;
+
   return {
     cols,
     rows,
     ledPx,
-    // The gap is a fraction of the LED, so the black matrix keeps its
-    // proportion whether the patch holds 20 LEDs or 200.
-    gapPx: ledPx >= MIN_LED_PX_FOR_GRID ? Math.max(1, ledPx * 0.14) : 0,
+    emitterRatio,
+    gapPx: tooSmall ? 0 : Math.max(rawGap, rawGap > 0 ? 1 : 0),
+    gapAlpha: tooSmall || rawGap <= 0 ? 0 : Math.min(1, rawGap),
     widthCm: (cols * pitchMm) / 10,
     heightCm: (rows * pitchMm) / 10,
   };

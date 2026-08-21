@@ -1,13 +1,17 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useStore } from "../../state/store";
 import { effectivePitchMm, layerSizeCm } from "../../lib/cabinets";
-import { boxDownsample, previewGeometry, sourceRectFor } from "../../lib/pixelPreview";
+import {
+  PATCH_WIDTH_CM,
+  boxDownsample,
+  defaultEmitterRatio,
+  previewGeometry,
+  sourceRectFor,
+} from "../../lib/pixelPreview";
 import { screenFilter } from "../../lib/faceFilter";
 import type { Layer } from "../../types";
 
 const ASPECT = 9 / 16;
-const MIN_REGION_CM = 4;
-const MAX_REGION_CM = 40;
 
 /**
  * A hand-sized patch of the selected face, blown up until one LED covers
@@ -33,12 +37,14 @@ export default function PixelPreviewPanel() {
   const dragRef = useRef<{ x: number; y: number } | null>(null);
 
   const [width, setWidth] = useState(0);
-  const [regionCm, setRegionCm] = useState(12);
+  // null follows the pitch's usual package; a number is the user overruling it.
+  const [emitterOverride, setEmitterOverride] = useState<number | null>(null);
   const [shown, setShown] = useState<{ cols: number; rows: number; widthCm: number } | null>(null);
 
   const layer: Layer | null = layers.find((l) => l.id === selectedLayerId) ?? null;
   const content = layer?.content ?? null;
   const pitchMm = layer ? effectivePitchMm(layer, defaultPitchMm) : defaultPitchMm;
+  const emitterRatio = emitterOverride ?? defaultEmitterRatio(pitchMm);
 
   useEffect(() => {
     const el = boxRef.current;
@@ -80,7 +86,8 @@ export default function PixelPreviewPanel() {
     const face = layerSizeCm(layer);
     const geo = previewGeometry({
       pitchMm,
-      regionWidthCm: regionCm,
+      emitterRatio,
+      regionWidthCm: PATCH_WIDTH_CM,
       canvasWidthPx: canvas.width,
       canvasHeightPx: canvas.height,
     });
@@ -154,6 +161,7 @@ export default function PixelPreviewPanel() {
     // Step four: the dark matrix between LEDs. Skipped when they are too small
     // to carry a gap, because at that size it draws moiré, not structure.
     if (geo.gapPx > 0) {
+      ctx.globalAlpha = geo.gapAlpha;
       ctx.fillStyle = "#05070a";
       for (let c = 1; c < geo.cols; c++) {
         ctx.fillRect(c * geo.ledPx - geo.gapPx / 2, 0, geo.gapPx, canvas.height);
@@ -161,6 +169,7 @@ export default function PixelPreviewPanel() {
       for (let r = 1; r < geo.rows; r++) {
         ctx.fillRect(0, r * geo.ledPx - geo.gapPx / 2, canvas.width, geo.gapPx);
       }
+      ctx.globalAlpha = 1;
     }
 
     setShown((prev) =>
@@ -168,7 +177,7 @@ export default function PixelPreviewPanel() {
         ? prev
         : { cols: geo.cols, rows: geo.rows, widthCm: geo.widthCm }
     );
-  }, [layer, content, width, pitchMm, regionCm, display]);
+  }, [layer, content, width, pitchMm, emitterRatio, display]);
 
   // The still is loaded once and kept. A video is read live off the editor's
   // own element, so it needs nothing here.
@@ -259,25 +268,30 @@ export default function PixelPreviewPanel() {
 
           <label
             className="slider-row"
-            title="벽에서 잘라내 보여줄 영역의 실제 폭입니다. 좁힐수록 크게 확대됩니다."
+            title="한 픽셀에서 실제로 빛을 내는 부분의 크기입니다. 피치가 같아도 제품마다 다르므로, 쓰시는 제품에 맞게 조정하세요."
           >
             <span>
-              보는 폭
-              <em>{shown ? shown.widthCm.toFixed(1) + " cm" : regionCm + " cm"}</em>
+              발광부
+              <em>
+                {(emitterRatio * pitchMm).toFixed(1)} mm · {Math.round(emitterRatio * 100)}%
+                {emitterOverride === null ? " 자동" : ""}
+              </em>
             </span>
             <input
               type="range"
-              min={MIN_REGION_CM}
-              max={MAX_REGION_CM}
-              step={1}
-              value={regionCm}
-              onChange={(e) => setRegionCm(Number(e.target.value))}
+              min={0.3}
+              max={1}
+              step={0.02}
+              value={emitterRatio}
+              onChange={(e) => setEmitterOverride(Number(e.target.value))}
+              onDoubleClick={() => setEmitterOverride(null)}
             />
           </label>
 
           {shown && (
             <p className="muted small">
-              픽셀 피치 {pitchMm} mm · 이 영역에 LED {shown.cols} × {shown.rows}개 · 끌어서 이동
+              벽 {shown.widthCm.toFixed(1)} cm 폭 · 픽셀 피치 {pitchMm} mm · LED {shown.cols} ×{" "}
+              {shown.rows}개 · 끌어서 이동
             </p>
           )}
         </>

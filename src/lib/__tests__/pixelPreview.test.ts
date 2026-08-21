@@ -1,26 +1,39 @@
 import { describe, expect, it } from "vitest";
-import { boxDownsample, previewGeometry, sourceRectFor } from "../pixelPreview";
+import {
+  PATCH_WIDTH_CM,
+  boxDownsample,
+  defaultEmitterRatio,
+  previewGeometry,
+  sourceRectFor,
+} from "../pixelPreview";
 import type { Pixels } from "../pixelPreview";
 
 const canvas = { canvasWidthPx: 308, canvasHeightPx: 173 };
+const patch = { regionWidthCm: PATCH_WIDTH_CM, ...canvas };
+
+/** Share of an LED cell that ends up drawn dark, alpha included. */
+function darkShare(pitchMm: number) {
+  const g = previewGeometry({ pitchMm, ...patch });
+  return (g.gapPx * g.gapAlpha) / g.ledPx;
+}
 
 describe("previewGeometry", () => {
   it("puts several screen pixels on each LED at a hand-sized patch", () => {
     // The whole point: at this magnification an LED is visible as an LED.
     for (const pitchMm of [1.2, 1.5, 1.8, 2.5, 3, 4]) {
-      const g = previewGeometry({ pitchMm, regionWidthCm: 12, ...canvas });
+      const g = previewGeometry({ pitchMm, ...patch });
       expect(g.ledPx).toBeGreaterThan(3);
       expect(g.gapPx).toBeGreaterThan(0);
     }
   });
 
   it("separates pitches the arrangement view cannot", () => {
-    const fine = previewGeometry({ pitchMm: 1.5, regionWidthCm: 12, ...canvas });
-    const coarse = previewGeometry({ pitchMm: 1.8, regionWidthCm: 12, ...canvas });
+    const fine = previewGeometry({ pitchMm: 1.5, ...patch });
+    const coarse = previewGeometry({ pitchMm: 1.8, ...patch });
     // 1.5 and 1.8 mm differ by a fifth; the patch must show that, not round it away.
-    expect(fine.cols).toBe(80);
-    expect(coarse.cols).toBe(67);
-    expect(coarse.ledPx / fine.ledPx).toBeCloseTo(80 / 67, 5);
+    expect(fine.cols).toBe(67);
+    expect(coarse.cols).toBe(56);
+    expect(coarse.ledPx / fine.ledPx).toBeCloseTo(67 / 56, 5);
   });
 
   it("drops the grid rather than draw moiré when LEDs get too small", () => {
@@ -31,10 +44,43 @@ describe("previewGeometry", () => {
   });
 
   it("reports the real size it actually shows, rounded to whole LEDs", () => {
-    const g = previewGeometry({ pitchMm: 4, regionWidthCm: 12, ...canvas });
-    expect(g.cols).toBe(30);
-    expect(g.widthCm).toBeCloseTo(12, 6);
+    const g = previewGeometry({ pitchMm: 4, ...patch });
+    expect(g.cols).toBe(25);
+    expect(g.widthCm).toBeCloseTo(10, 6);
     expect(g.heightCm).toBeCloseTo((g.rows * 4) / 10, 6);
+  });
+});
+
+describe("the emitter model", () => {
+  it("keeps the lamp size while the pitch grows, so the dark gap widens", () => {
+    // The same 2.0 mm package serves 2.5, 3 and 4 mm boards.
+    expect(defaultEmitterRatio(2.5) * 2.5).toBeCloseTo(2.0, 6);
+    expect(defaultEmitterRatio(3) * 3).toBeCloseTo(2.0, 6);
+    expect(defaultEmitterRatio(4) * 4).toBeCloseTo(2.0, 6);
+  });
+
+  it("draws a coarse pitch darker than a fine one, not the other way round", () => {
+    // The bug this replaces: a floor of one whole pixel on the gap made 1.2 mm
+    // come out 32% dark and 4 mm only 14% — the finest pitch looked the
+    // gappiest, which is the opposite of every real wall.
+    expect(darkShare(4)).toBeGreaterThan(darkShare(1.2) * 2);
+    expect(darkShare(3)).toBeGreaterThan(darkShare(1.5));
+    expect(darkShare(1.2)).toBeLessThan(0.25);
+    expect(darkShare(4)).toBeCloseTo(0.5, 2);
+  });
+
+  it("fades a sub-pixel gap instead of forcing it to a whole pixel", () => {
+    const g = previewGeometry({ pitchMm: 1.2, ...patch });
+    // 0.2 mm of 1.2 mm, on a 3.7 px LED, is under a pixel wide.
+    expect(g.gapPx).toBe(1);
+    expect(g.gapAlpha).toBeGreaterThan(0);
+    expect(g.gapAlpha).toBeLessThan(1);
+  });
+
+  it("takes an override, for a product whose package is not the usual one", () => {
+    const g = previewGeometry({ pitchMm: 4, emitterRatio: 0.9, ...patch });
+    expect(g.emitterRatio).toBe(0.9);
+    expect(g.gapPx * g.gapAlpha).toBeCloseTo(g.ledPx * 0.1, 5);
   });
 });
 
