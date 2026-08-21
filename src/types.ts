@@ -61,8 +61,11 @@ export interface CabinetSpec {
 /** "cover" is the default: an LED face is a fixed canvas, not a picture frame. */
 export type FitMode = "cover" | "contain";
 
+export type ContentKind = "image" | "video";
+
 export interface LayerContent {
-  /** object URL of the user's video; owned by the store, revoked on replace */
+  kind: ContentKind;
+  /** object URL of the user's file; owned by the store, revoked on replace */
   url: string;
   /**
    * A still frame of that video, captured once on upload. Paper output — the

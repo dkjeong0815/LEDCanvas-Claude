@@ -1,6 +1,6 @@
 import { useRef, useState } from "react";
 import { useStore } from "../../state/store";
-import { captureFirstFrame } from "../../lib/videoPoster";
+import { captureFirstFrame, sampleImageGlow } from "../../lib/contentStill";
 
 export default function ContentPanel() {
   const layers = useStore((s) => s.layers);
@@ -14,18 +14,26 @@ export default function ContentPanel() {
   const [error, setError] = useState<string | null>(null);
   const selected = layers.find((l) => l.id === selectedLayerId) ?? null;
 
+  // The only place in the app that cares which kind of file arrived. Past this
+  // point a layer just has a still and a colour.
   async function accept(file: File, layerId: string, fitMode: "cover" | "contain") {
     setBusy(true);
     setError(null);
     const url = URL.createObjectURL(file);
+    const isVideo = file.type.startsWith("video/");
     try {
-      // The still has to exist before the layer does: a layer whose content
-      // cannot be printed is worse than a layer with no content at all.
-      const poster = await captureFirstFrame(url);
-      setLayerContent(layerId, url, poster.url, poster.glowColor, fitMode);
+      if (isVideo) {
+        // The still has to exist before the layer does: a layer whose content
+        // cannot be printed is worse than a layer with no content at all.
+        const poster = await captureFirstFrame(url);
+        setLayerContent(layerId, url, poster.url, poster.glowColor, "video", fitMode);
+      } else {
+        const glowColor = await sampleImageGlow(url);
+        setLayerContent(layerId, url, url, glowColor, "image", fitMode);
+      }
     } catch (e) {
       URL.revokeObjectURL(url);
-      setError(e instanceof Error ? e.message : "동영상을 불러오지 못했습니다.");
+      setError(e instanceof Error ? e.message : "파일을 불러오지 못했습니다.");
     } finally {
       setBusy(false);
     }
@@ -35,7 +43,7 @@ export default function ContentPanel() {
     <section className="panel">
       <h2>콘텐츠</h2>
       {!selected ? (
-        <p className="muted small">레이어를 선택하면 동영상을 올릴 수 있습니다.</p>
+        <p className="muted small">레이어를 선택하면 이미지나 동영상을 올릴 수 있습니다.</p>
       ) : (
         <>
           <div className="btn-row">
@@ -44,7 +52,7 @@ export default function ContentPanel() {
               disabled={busy}
               onClick={() => inputRef.current?.click()}
             >
-              {busy ? "읽는 중…" : selected.content ? "동영상 교체" : "동영상 올리기"}
+              {busy ? "읽는 중…" : selected.content ? "콘텐츠 교체" : "이미지 · 동영상 올리기"}
             </button>
             {selected.content && !busy && (
               <button
@@ -82,16 +90,16 @@ export default function ContentPanel() {
             </div>
           )}
 
-          {selected.content && (
+          {selected.content?.kind === "video" && (
             <p className="muted small" style={{ marginTop: 8 }}>
-              인쇄와 PNG에는 첫 프레임이 들어갑니다.
+              동영상 · 인쇄와 PNG에는 첫 프레임이 들어갑니다.
             </p>
           )}
 
           <input
             ref={inputRef}
             type="file"
-            accept="video/*"
+            accept="image/*,video/*"
             hidden
             onChange={(e) => {
               const file = e.target.files?.[0];

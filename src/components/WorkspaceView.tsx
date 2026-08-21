@@ -18,9 +18,9 @@ export interface WorkspaceViewProps {
   onPointerUp?: (e: React.PointerEvent) => void;
   showHandles?: boolean;
   /**
-   * Draw each layer's captured still instead of the playing video. The printed
-   * sheet sets this: paper holds one frame, and a live <video> prints blank in
-   * some browsers.
+   * Draw every layer's still instead of playing its video. The printed sheet
+   * sets this: paper holds one frame, and a live <video> prints blank in some
+   * browsers.
    */
   stillContent?: boolean;
   /** annotations, shadow and glow — shared with the sheet and the PNG */
@@ -160,7 +160,9 @@ export default function WorkspaceView({
             onPointerCancel={onPointerUp}
           >
             {layer.content &&
-              (stillContent ? (
+              // Paper always takes the still, and an image is its own still —
+              // so the video element is the exception, not the default.
+              (stillContent || layer.content.kind === "image" ? (
                 <img
                   className="layer-content"
                   src={layer.content.posterUrl}

@@ -1,12 +1,16 @@
 /**
- * Grabs a still out of a video file.
+ * Every layer's content carries a still, whatever it is.
  *
- * The sheet and the PNG are paper — they need one frame, not a clip. Capturing
- * that frame once, when the file is dropped in, keeps printing clear of decoder
- * timing: by the time anyone presses 인쇄 the still already exists. A <video>
- * element printed directly comes out blank in some browsers, so this is not an
- * optimisation, it is the only reliable way to get the content onto the sheet.
+ * The sheet and the PNG are paper: they hold one frame per layer and cannot
+ * hold more. An image is already that frame; a video has to give one up. So the
+ * work here is lopsided on purpose — the video path extracts a frame, the image
+ * path just reports its colour — and everything downstream reads a still
+ * without knowing which kind it came from.
  */
+
+/** Longest side of the scratch canvas the average colour is taken from. */
+const SAMPLE_MAX = 256;
+const CAPTURE_TIMEOUT_MS = 15000;
 
 export interface VideoPoster {
   /** blob URL of the captured frame */
@@ -21,18 +25,32 @@ export interface VideoPoster {
  * The colour a lit panel would throw onto the wall.
  *
  * A plain average washes out to grey, because dark pixels drag every hue
- * towards the middle. Real light does not work that way — the bright parts of
- * a picture are what actually spill — so each pixel is weighted by its own
+ * towards the middle. Real light does not work that way — the bright parts of a
+ * picture are what actually spill — so each pixel is weighted by its own
  * luminance.
+ *
+ * Sampling happens on a downscaled copy. A 4000 px photo has nothing more to
+ * say about its average colour than a 256 px one, and reading twelve million
+ * pixels to find that out would stall the upload.
  */
-function averageGlowColor(ctx: CanvasRenderingContext2D, w: number, h: number): string {
+function glowColorFrom(source: CanvasImageSource, widthPx: number, heightPx: number): string {
+  const scale = Math.min(1, SAMPLE_MAX / Math.max(widthPx, heightPx));
+  const w = Math.max(1, Math.round(widthPx * scale));
+  const h = Math.max(1, Math.round(heightPx * scale));
+
+  const canvas = document.createElement("canvas");
+  canvas.width = w;
+  canvas.height = h;
+  const ctx = canvas.getContext("2d");
+  if (!ctx) return "255, 255, 255";
+  ctx.drawImage(source, 0, 0, w, h);
+
   const { data } = ctx.getImageData(0, 0, w, h);
   let r = 0;
   let g = 0;
   let b = 0;
   let weight = 0;
-  // Every 4th pixel is plenty for an average and keeps large frames quick.
-  for (let i = 0; i < data.length; i += 16) {
+  for (let i = 0; i < data.length; i += 4) {
     const luma = (data[i] * 0.2126 + data[i + 1] * 0.7152 + data[i + 2] * 0.0722) / 255;
     r += data[i] * luma;
     g += data[i + 1] * luma;
@@ -43,8 +61,28 @@ function averageGlowColor(ctx: CanvasRenderingContext2D, w: number, h: number): 
   return `${Math.round(r / weight)}, ${Math.round(g / weight)}, ${Math.round(b / weight)}`;
 }
 
-const CAPTURE_TIMEOUT_MS = 15000;
+function loadImage(url: string): Promise<HTMLImageElement> {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    // onload, not decode(): decode() never settles while the page is not being
+    // painted, which strands the upload instead of failing it.
+    img.onload = () => resolve(img);
+    img.onerror = () => reject(new Error("이미지를 열 수 없습니다."));
+    img.src = url;
+  });
+}
 
+/** An image is its own still, so only its colour has to be worked out. */
+export async function sampleImageGlow(imageUrl: string): Promise<string> {
+  const img = await loadImage(imageUrl);
+  return glowColorFrom(img, img.naturalWidth, img.naturalHeight);
+}
+
+/**
+ * Grabs a still out of a video file. A <video> element printed directly comes
+ * out blank in some browsers, so this is not an optimisation — it is the only
+ * reliable way to get moving content onto paper.
+ */
 export function captureFirstFrame(videoUrl: string): Promise<VideoPoster> {
   return new Promise((resolve, reject) => {
     const video = document.createElement("video");
@@ -85,7 +123,7 @@ export function captureFirstFrame(videoUrl: string): Promise<VideoPoster> {
       const ctx = canvas.getContext("2d");
       if (!ctx) return fail("캔버스를 만들지 못했습니다.");
       ctx.drawImage(video, 0, 0);
-      const glowColor = averageGlowColor(ctx, widthPx, heightPx);
+      const glowColor = glowColorFrom(video, widthPx, heightPx);
 
       canvas.toBlob(
         (blob) => {

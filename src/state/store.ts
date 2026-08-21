@@ -2,6 +2,7 @@ import { create } from "zustand";
 import type {
   BackgroundImage,
   CabinetType,
+  ContentKind,
   Calibration,
   DisplayOptions,
   FitMode,
@@ -36,10 +37,16 @@ function revoke(url: string | undefined | null) {
   if (url && url.startsWith("blob:")) URL.revokeObjectURL(url);
 }
 
-/** A layer's content owns two blobs: the video and the still captured from it. */
+/**
+ * A video owns two blobs, the clip and the still cut from it; an image is its
+ * own still and owns one under two names. Releasing that one twice would be a
+ * no-op, but saying so here is cheaper than wondering later.
+ */
 function revokeContent(layer: Layer) {
-  revoke(layer.content?.url);
-  revoke(layer.content?.posterUrl);
+  const content = layer.content;
+  if (!content) return;
+  revoke(content.url);
+  if (content.posterUrl !== content.url) revoke(content.posterUrl);
 }
 
 interface State {
@@ -96,6 +103,7 @@ interface State {
     url: string,
     posterUrl: string,
     glowColor: string,
+    kind: ContentKind,
     fitMode: FitMode
   ) => void;
   setLayerFitMode: (id: string, fitMode: FitMode) => void;
@@ -309,12 +317,12 @@ export const useStore = create<State>((set, get) => ({
   setLayerPitch: (id, mm) =>
     set((s) => ({ layers: s.layers.map((l) => (l.id === id ? { ...l, pixelPitchMm: mm } : l)) })),
 
-  setLayerContent: (id, url, posterUrl, glowColor, fitMode) =>
+  setLayerContent: (id, url, posterUrl, glowColor, kind, fitMode) =>
     set((s) => ({
       layers: s.layers.map((l) => {
         if (l.id !== id) return l;
         revokeContent(l);
-        return { ...l, content: { url, posterUrl, glowColor, fitMode } };
+        return { ...l, content: { kind, url, posterUrl, glowColor, fitMode } };
       }),
     })),
 
