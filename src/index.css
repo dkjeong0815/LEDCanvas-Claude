@@ -313,30 +313,32 @@ p {
   margin: 0;
   font-size: 15px;
   font-weight: 700;
-  /* Warm against a cool palette: at this lightness the hue shift costs almost
-     nothing in contrast (12.96 against the panel, where the cool white was
-     13.07) and marks a heading without needing more size. */
-  color: #f2e8d5;
+  /* Pale blue rather than the body's cool white. The two are nearly the same
+     colour — body text is already hue 220, the same as the primary — so this
+     alone would not mark a heading; size and weight do that, and the filled
+     badge beside it carries the accent, where a solid 20px circle shows a
+     colour that 15px text cannot. */
+  color: #dce9ff;
 }
 
 /* Continues the numbering of the stepper in the header: the sidebar is an
-   order of work, not a pile of settings. */
-/* Filled, not tinted: at 18% alpha it sat 1.3:1 against the panel and read as
-   a smudge rather than a number. Slate rather than the primary blue, because
-   the 추가 button beside it is that blue and a filled blue circle next to a
-   filled blue button reads as something to press. The beige matches the title
-   so the two read as one marker rather than two unrelated accents, a shade
-   deeper so the number sits under the words rather than shouting over them.
-   Round, because in this app only step numbers are round — buttons are 8px
-   rects and chips are pills. */
+   order of work, not a pile of settings.
+
+   Filled, not tinted — at 18% alpha it sat 1.3:1 against the panel and read as
+   a smudge rather than a number; filled it is 7.5:1. It carries the accent
+   because a solid 20px circle shows a colour that 15px text cannot. Pale blue,
+   not the primary: the 추가 button beside it is that vivid blue, and matching
+   it would make the number look like something to press. Round, because in
+   this app only step numbers are round — buttons are 8px rects, chips are
+   pills. */
 .panel-index {
   display: grid;
   place-items: center;
   width: 20px;
   height: 20px;
   border-radius: 50%;
-  background: #d9c9a3;
-  color: #0f1115;
+  background: #8ab4ff;
+  color: #0b1220;
   font-size: 11px;
   font-weight: 700;
 }
@@ -449,9 +451,9 @@ p {
 .segmented button {
   flex: 1;
   display: flex;
-  flex-direction: column;
+  justify-content: center;
   align-items: center;
-  gap: 2px;
+  gap: 4px;
   padding: 8px 6px;
   border: 1px solid var(--line);
   background: var(--surface-2);
@@ -459,11 +461,6 @@ p {
   border-radius: 8px;
   font: inherit;
   cursor: pointer;
-}
-
-.segmented button small {
-  font-size: 10.5px;
-  opacity: 0.75;
 }
 
 .segmented button.active {

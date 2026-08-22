@@ -51,7 +51,7 @@ export default function LayerPanel({ onOpenPixelPreview }: { onOpenPixelPreview:
             </button>
           </div>
 
-          <label className="field-label">캐비닛</label>
+          <label className="field-label">캐비닛(cm)</label>
           <div className="segmented">
             {CABINET_TYPES.map((t) => (
               <button
@@ -59,7 +59,7 @@ export default function LayerPanel({ onOpenPixelPreview }: { onOpenPixelPreview:
                 className={selected.cabinetType === t ? "active" : ""}
                 onClick={() => setLayerCabinetType(selected.id, t)}
               >
-                {CABINETS[t].label}
+                {CABINETS[t].label}({CABINETS[t].widthCm} × {CABINETS[t].heightCm})
               </button>
             ))}
           </div>
