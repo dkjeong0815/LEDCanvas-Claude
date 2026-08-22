@@ -888,6 +888,11 @@ input[type="number"] {
   accent-color: var(--primary);
 }
 
+.print-hint {
+  max-width: 40ch;
+  line-height: 1.35;
+}
+
 .print-doc {
   display: flex;
   flex-direction: column;

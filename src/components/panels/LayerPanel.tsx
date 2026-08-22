@@ -1,5 +1,6 @@
 import { useStore } from "../../state/store";
 import { CABINETS, CABINET_TYPES, PIXEL_PITCH_PRESETS, cabinetCount, layerResolutionPx, layerSizeCm } from "../../lib/cabinets";
+import { cm } from "../../lib/format";
 
 export default function LayerPanel({ onOpenPixelPreview }: { onOpenPixelPreview: () => void }) {
   const layers = useStore((s) => s.layers);
@@ -121,8 +122,7 @@ export default function LayerPanel({ onOpenPixelPreview }: { onOpenPixelPreview:
             <div>
               <dt>크기(cm)</dt>
               <dd>
-                {layerSizeCm(selected).widthCm.toFixed(1)} ×{" "}
-                {layerSizeCm(selected).heightCm.toFixed(1)}
+                {cm(layerSizeCm(selected).widthCm)} × {cm(layerSizeCm(selected).heightCm)}
               </dd>
             </div>
             <div>

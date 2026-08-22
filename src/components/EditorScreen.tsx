@@ -7,6 +7,7 @@ import DisplayPanel from "./panels/DisplayPanel";
 import PixelPreview from "./PixelPreview";
 import PrintView from "./PrintView";
 import { useStore, wallBounds } from "../state/store";
+import { cm } from "../lib/format";
 
 export default function EditorScreen() {
   const calibration = useStore((s) => s.calibration);
@@ -25,7 +26,7 @@ export default function EditorScreen() {
           <div>
             <h2>작업 캔버스</h2>
             <p className="muted small">
-              벽면 {bounds.widthCm.toFixed(0)} × {bounds.heightCm.toFixed(0)} cm · 기준{" "}
+              벽면 {cm(bounds.widthCm)} × {cm(bounds.heightCm)} cm · 기준{" "}
               {calibration.referenceWidthCm} × {calibration.referenceHeightCm} cm
             </p>
           </div>

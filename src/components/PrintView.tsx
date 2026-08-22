@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useStore, wallBounds } from "../state/store";
 import {
@@ -9,6 +9,9 @@ import {
 } from "../lib/cabinets";
 import { compositeDataUrl } from "../lib/composite";
 import WorkspaceView from "./WorkspaceView";
+import type { Layer } from "../types";
+import { cm } from "../lib/format";
+import { layersForPrint } from "../lib/printImages";
 
 /** CSS defines 1mm as exactly 96/25.4 px, so sizes given in px print predictably. */
 const MM_TO_PX = 96 / 25.4;
@@ -18,7 +21,10 @@ const SHEET_HEIGHT_MM = 297 - 24;
 /** paper-space height of the title block, table and footer around the artwork */
 const TITLE_BLOCK_MM = 26;
 const FOOTER_MM = 12;
-const TABLE_ROW_MM = 9;
+/* 7, not 9. The artwork is what the height is short of — the wall is 1.7:1 and
+   the space left for it 2.1:1, so every millimetre the table gives back widens
+   the drawing too. */
+const TABLE_ROW_MM = 7;
 
 export default function PrintView({ onClose }: { onClose: () => void }) {
   const calibration = useStore((s) => s.calibration);
@@ -30,6 +36,21 @@ export default function PrintView({ onClose }: { onClose: () => void }) {
 
   // Only the PNG download needs a bitmap; the sheet itself renders live.
   const [pngUrl, setPngUrl] = useState<string | null>(null);
+  const [printLayers, setPrintLayers] = useState<Layer[]>(layers);
+  const nameRef = useRef<HTMLInputElement>(null);
+
+  /**
+   * The sheet always names its faces, whatever the editor is set to. 발표 모드
+   * is right for a picture and wrong for a drawing: the table lists L1, L2, L3
+   * and without the labels there is no way to tell which screen is which.
+   */
+  const sheetDisplay = { ...display, annotations: true };
+
+  // A drawing is worth naming, and the browser takes the PDF's file name from
+  // the document title.
+  useEffect(() => {
+    nameRef.current?.focus();
+  }, []);
 
   useEffect(() => {
     if (!calibration || !background) return;
@@ -47,6 +68,52 @@ export default function PrintView({ onClose }: { onClose: () => void }) {
     };
   }, [calibration, background, layers, display]);
 
+  // Title block, table and footer take fixed height; the arrangement gets the
+  // rest of the sheet. Sizes are in px because CSS maps px to mm exactly, and
+  // they sit above the early return because the resampling hook needs them.
+  const viewWidthPx = SHEET_WIDTH_MM * MM_TO_PX;
+  const tableMm = TABLE_ROW_MM * (layers.length + 2);
+  const viewHeightMm = SHEET_HEIGHT_MM - TITLE_BLOCK_MM - FOOTER_MM - tableMm;
+  const viewHeightPx = Math.max(60 * MM_TO_PX, viewHeightMm * MM_TO_PX);
+
+  // Stills resampled to what 300 dpi needs at the size each face is printed.
+  useEffect(() => {
+    if (!calibration) return;
+    let cancelled = false;
+    let mine: string[] = [];
+    const scale = Math.min(viewWidthPx / calibration.rectWidthPx, viewHeightPx / calibration.rectHeightPx);
+
+    (async () => {
+      const { layers: prepared, created } = await layersForPrint(layers, (layer) => {
+        const drawnPx = layerSizeCm(layer).widthCm * calibration.pxPerCm * scale;
+        return drawnPx / MM_TO_PX;
+      });
+      mine = created;
+      if (cancelled) created.forEach((u) => URL.revokeObjectURL(u));
+      else setPrintLayers(prepared);
+    })();
+
+    return () => {
+      cancelled = true;
+      mine.forEach((u) => URL.revokeObjectURL(u));
+    };
+  }, [calibration, layers, viewWidthPx, viewHeightPx]);
+
+  /**
+   * The browser names the saved PDF after the document title, so the sheet's
+   * own name is what the file should be called — not "LED Canvas".
+   */
+  const print = () => {
+    const previous = document.title;
+    document.title = projectName.trim() || "LED Canvas";
+    const restore = () => {
+      document.title = previous;
+      window.removeEventListener("afterprint", restore);
+    };
+    window.addEventListener("afterprint", restore);
+    window.print();
+  };
+
   const today = useMemo(
     () =>
       new Date().toLocaleDateString("ko-KR", { year: "numeric", month: "long", day: "numeric" }),
@@ -56,13 +123,6 @@ export default function PrintView({ onClose }: { onClose: () => void }) {
   if (!calibration) return null;
 
   const bounds = wallBounds(calibration);
-
-  // Title block, table and footer take fixed height; the arrangement gets the
-  // rest of the sheet. Sizes are in px because CSS maps px to mm exactly.
-  const viewWidthPx = SHEET_WIDTH_MM * MM_TO_PX;
-  const tableMm = TABLE_ROW_MM * (layers.length + 2);
-  const viewHeightMm = SHEET_HEIGHT_MM - TITLE_BLOCK_MM - FOOTER_MM - tableMm;
-  const viewHeightPx = Math.max(60 * MM_TO_PX, viewHeightMm * MM_TO_PX);
 
   const totals = layers.reduce(
     (acc, l) => {
@@ -81,7 +141,7 @@ export default function PrintView({ onClose }: { onClose: () => void }) {
       <div>
         <h1>{title}</h1>
         <p>
-          벽면 {bounds.widthCm.toFixed(0)} × {bounds.heightCm.toFixed(0)} cm · 기준{" "}
+          벽면 {cm(bounds.widthCm)} × {cm(bounds.heightCm)} cm · 기준{" "}
           {calibration.referenceWidthCm} × {calibration.referenceHeightCm} cm
         </p>
       </div>
@@ -112,7 +172,7 @@ export default function PrintView({ onClose }: { onClose: () => void }) {
       grid: `${l.cols} × ${l.rows}`,
       count: cabinetCount(l),
       pitch: l.pixelPitchMm,
-      size: `${size.widthCm.toFixed(1)} × ${size.heightCm.toFixed(1)}`,
+      size: `${cm(size.widthCm)} × ${cm(size.heightCm)}`,
       // The whole layer, cabinet array included.
       resolution: `${whole.widthPx} × ${whole.heightPx}`,
       // Its pixel count — the number a processor is sized by.
@@ -162,6 +222,7 @@ export default function PrintView({ onClose }: { onClose: () => void }) {
         <label>
           프로젝트명
           <input
+            ref={nameRef}
             type="text"
             value={projectName}
             onChange={(e) => setProjectName(e.target.value)}
@@ -169,13 +230,16 @@ export default function PrintView({ onClose }: { onClose: () => void }) {
           />
         </label>
         <span className="muted small">A3 가로 · 1장</span>
+        <span className="muted small print-hint">
+          인쇄 대화상자에서 <b>머리글 및 바닥글</b>을 꺼야 날짜와 주소가 찍히지 않습니다.
+        </span>
         <div className="spacer" />
         {pngUrl && (
           <a className="btn btn-ghost btn-sm" href={pngUrl} download={`${title}-합성.png`}>
             PNG 저장
           </a>
         )}
-        <button className="btn btn-primary btn-sm" onClick={() => window.print()}>
+        <button className="btn btn-primary btn-sm" onClick={print}>
           인쇄 · PDF 저장
         </button>
         <button className="btn btn-ghost btn-sm" onClick={onClose}>
@@ -192,10 +256,10 @@ export default function PrintView({ onClose }: { onClose: () => void }) {
           <div className="sheet-workspace">
             <WorkspaceView
               calibration={calibration}
-              layers={layers}
+              layers={printLayers}
               frameWidth={viewWidthPx}
               frameHeight={viewHeightPx}
-              display={display}
+              display={sheetDisplay}
               stillContent
             />
           </div>

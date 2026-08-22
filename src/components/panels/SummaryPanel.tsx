@@ -4,6 +4,7 @@ import {
   layerResolutionPx,
   layerSizeCm,
 } from "../../lib/cabinets";
+import { cm } from "../../lib/format";
 
 export default function SummaryPanel() {
   const layers = useStore((s) => s.layers);
@@ -18,7 +19,7 @@ export default function SummaryPanel() {
       label: l.label,
       cabinets: cabinetCount(l),
       pitch: l.pixelPitchMm,
-      size: `${size.widthCm.toFixed(0)} × ${size.heightCm.toFixed(0)}`,
+      size: `${cm(size.widthCm)} × ${cm(size.heightCm)}`,
       resolution: `${whole.widthPx} × ${whole.heightPx}`,
       fullResolution: (whole.widthPx * whole.heightPx).toLocaleString("ko-KR"),
       areaM2: (size.widthCm * size.heightCm) / 10000,

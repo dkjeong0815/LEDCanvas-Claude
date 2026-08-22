@@ -4,6 +4,7 @@ import { layerSizeCm } from "../lib/cabinets";
 import { layerColor } from "../lib/palette";
 import { screenFilter } from "../lib/faceFilter";
 import type { Calibration, DisplayOptions, Layer } from "../types";
+import { cm } from "../lib/format";
 
 export interface WorkspaceViewProps {
   calibration: Calibration;
@@ -194,7 +195,7 @@ export default function WorkspaceView({
             )}
             {display.annotations && (
               <span className="layer-dims">
-                {widthCm.toFixed(0)} × {heightCm.toFixed(0)} cm
+                {cm(widthCm)} × {cm(heightCm)} cm
               </span>
             )}
             {showHandles && display.annotations && (

@@ -2,6 +2,7 @@ import type { Calibration, DisplayOptions, Layer, Point } from "../types";
 import { layerSizeCm } from "./cabinets";
 import { layerColor } from "./palette";
 import { screenFilter } from "./faceFilter";
+import { cm } from "./format";
 
 function loadImage(src: string): Promise<HTMLImageElement> {
   return new Promise((resolve, reject) => {
@@ -223,7 +224,7 @@ export async function renderComposite(
       drawLayerAnnotations(
         ctx,
         layer.label,
-        `${widthCm.toFixed(0)} × ${heightCm.toFixed(0)} cm`,
+        `${cm(widthCm)} × ${cm(heightCm)} cm`,
         color,
         { x, y },
         { x: x + w, y: y + h },
