@@ -1,8 +1,13 @@
 :root {
   --bg: #0f1115;
-  --surface: #171a21;
-  --surface-2: #1e222b;
-  --line: #2b303b;
+  /* Panel against page was 1.09:1 and its border 1.32:1 — close enough to the
+     background that sections ran together. These sit at 1.20 and 1.60.
+     surface-2 had to come up with them: at the old value it landed within
+     1.01 of the new panel, which would have dissolved every chip and input
+     into the card behind it. */
+  --surface: #1e232d;
+  --surface-2: #2c3341;
+  --line: #3b4453;
   --text: #e7eaf0;
   --muted: #97a0b0;
   --primary: #4f8cff;
@@ -279,7 +284,7 @@ p {
   overflow-y: auto;
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 16px;
   padding-right: 2px;
 }
 
@@ -291,6 +296,45 @@ p {
   display: flex;
   flex-direction: column;
   gap: 10px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.35), 0 6px 16px rgba(0, 0, 0, 0.16);
+}
+
+/* The result of the work, not another control for it. No fill, so the eye can
+   see where the inputs stop. */
+.panel-result {
+  background: none;
+  box-shadow: none;
+}
+
+.panel h2 {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  font-size: 15px;
+  font-weight: 700;
+}
+
+/* Continues the numbering of the stepper in the header: the sidebar is an
+   order of work, not a pile of settings. */
+.panel-index {
+  display: grid;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: rgba(79, 140, 255, 0.18);
+  color: var(--primary);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+/* Asymmetric on purpose. A title 10px from its own content and 12px from the
+   panel above belongs to neither; pulling it tight to what it names is what
+   makes the grouping readable. */
+.panel > h2,
+.panel > .panel-head {
+  margin-bottom: -4px;
 }
 
 .panel-head {

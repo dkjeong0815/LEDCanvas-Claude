@@ -332,8 +332,17 @@ export default function CalibrateScreen() {
 
       <aside className="side-pane">
         <section className="panel">
-          <h2>기준 물체</h2>
+          <h2>
+            <span className="panel-index">1</span>
+            기준 물체
+          </h2>
           <div className="segmented">
+            <button
+              className={referenceKind === "custom" ? "active" : ""}
+              onClick={() => setReferenceKind("custom")}
+            >
+              직접 입력
+            </button>
             <button
               className={referenceKind === "a4" ? "active" : ""}
               onClick={() => {
@@ -343,12 +352,6 @@ export default function CalibrateScreen() {
               }}
             >
               A4 용지
-            </button>
-            <button
-              className={referenceKind === "custom" ? "active" : ""}
-              onClick={() => setReferenceKind("custom")}
-            >
-              직접 입력
             </button>
           </div>
 
@@ -395,7 +398,10 @@ export default function CalibrateScreen() {
         </section>
 
         <section className="panel">
-          <h2>모서리 지정</h2>
+          <h2>
+            <span className="panel-index">2</span>
+            모서리 지정
+          </h2>
           <p className="muted small">
             사진을 클릭해 <b>좌상 → 우상 → 우하 → 좌하</b> 순서로 네 점을 찍고, 점을 드래그해 정밀하게
             맞추세요. 이 정확도가 전체 치수의 정확도를 좌우합니다.

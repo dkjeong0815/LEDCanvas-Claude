@@ -26,7 +26,7 @@ export default function SummaryPanel() {
   });
 
   return (
-    <section className="panel">
+    <section className="panel panel-result">
       <h2>요약</h2>
       <div className="table-scroll">
         <table className="summary">

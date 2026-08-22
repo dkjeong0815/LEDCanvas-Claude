@@ -17,7 +17,10 @@ export default function LayerPanel({ onOpenPixelPreview }: { onOpenPixelPreview:
   return (
     <section className="panel">
       <div className="panel-head">
-        <h2>레이어</h2>
+        <h2>
+          <span className="panel-index">1</span>
+          레이어
+        </h2>
         <button className="btn btn-primary btn-sm" onClick={addLayer}>
           추가
         </button>

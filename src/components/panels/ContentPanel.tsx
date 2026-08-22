@@ -41,7 +41,10 @@ export default function ContentPanel() {
 
   return (
     <section className="panel">
-      <h2>콘텐츠</h2>
+      <h2>
+        <span className="panel-index">2</span>
+        콘텐츠
+      </h2>
       {!selected ? (
         <p className="muted small">레이어를 선택하면 이미지나 동영상을 올릴 수 있습니다.</p>
       ) : (

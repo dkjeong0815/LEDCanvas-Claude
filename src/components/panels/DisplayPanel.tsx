@@ -11,7 +11,10 @@ export default function DisplayPanel() {
 
   return (
     <section className="panel">
-      <h2>표시</h2>
+      <h2>
+        <span className="panel-index">3</span>
+        표시
+      </h2>
 
       <div className="toggle-rows">
         <label title="레이어 이름, 테두리, 크기 표시를 한꺼번에 끕니다. 옮기거나 크기를 바꿀 때는 해제하세요.">

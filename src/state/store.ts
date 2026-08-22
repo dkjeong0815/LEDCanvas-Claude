@@ -128,7 +128,10 @@ export const MAX_SCREEN = 1.5;
 export const MAX_SHADOW_AMOUNT = 2.5;
 
 const initialCalibrationState = {
-  referenceKind: "a4" as ReferenceKind,
+  // Custom, not A4. Automatic sheet detection only runs for A4, so defaulting
+  // there spends a detection pass on every upload for a sheet that is usually
+  // not on the wall. Choosing A4 runs it on the spot, so nothing is lost.
+  referenceKind: "custom" as ReferenceKind,
   customWidthCm: 100,
   customHeightCm: 100,
   corners: [] as { x: number; y: number }[],
