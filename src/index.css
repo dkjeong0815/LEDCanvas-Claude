@@ -311,20 +311,25 @@ p {
   align-items: center;
   gap: 8px;
   margin: 0;
-  font-size: 15px;
+  font-size: 16px;
   font-weight: 700;
 }
 
 /* Continues the numbering of the stepper in the header: the sidebar is an
    order of work, not a pile of settings. */
+/* Filled, not tinted: at 18% alpha it sat 1.3:1 against the panel and read as
+   a smudge rather than a number. Slate rather than the primary blue, because
+   the 추가 button beside it is that blue and a filled blue circle next to a
+   filled blue button reads as something to press. Round, because in this app
+   only step numbers are round — buttons are 8px rects and chips are pills. */
 .panel-index {
   display: grid;
   place-items: center;
   width: 20px;
   height: 20px;
   border-radius: 50%;
-  background: rgba(79, 140, 255, 0.18);
-  color: var(--primary);
+  background: #8a94a6;
+  color: #0f1115;
   font-size: 11px;
   font-weight: 700;
 }

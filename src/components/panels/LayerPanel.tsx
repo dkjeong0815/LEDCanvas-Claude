@@ -109,22 +109,29 @@ export default function LayerPanel({ onOpenPixelPreview }: { onOpenPixelPreview:
             픽셀 미리보기
           </button>
 
+          {/* Units live in the label, as they do in the printed table. Three
+              columns of a 340 px sidebar leave about 87 px each, and "192.0 ×
+              96.0 cm" needs 105 — the unit was pushing the number out of its
+              own cell. */}
           <dl className="stats">
             <div>
-              <dt>캐비닛</dt>
-              <dd>{cabinetCount(selected)}개</dd>
+              <dt>캐비닛(개)</dt>
+              <dd>{cabinetCount(selected)}</dd>
             </div>
             <div>
-              <dt>크기</dt>
+              <dt>크기(cm)</dt>
               <dd>
-                {layerSizeCm(selected).widthCm.toFixed(1)} × {layerSizeCm(selected).heightCm.toFixed(1)} cm
+                {layerSizeCm(selected).widthCm.toFixed(1)} ×{" "}
+                {layerSizeCm(selected).heightCm.toFixed(1)}
               </dd>
             </div>
             <div>
-              <dt>전체 해상도</dt>
+              {/* Not "전체 해상도": the table reserves that for the pixel
+                  count, and this is the width and height. */}
+              <dt>해상도(px)</dt>
               <dd>
                 {layerResolutionPx(selected).widthPx} ×{" "}
-                {layerResolutionPx(selected).heightPx} px
+                {layerResolutionPx(selected).heightPx}
               </dd>
             </div>
           </dl>
