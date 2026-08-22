@@ -60,7 +60,7 @@ export default function LayerPanel({ onOpenPixelPreview }: { onOpenPixelPreview:
                 className={selected.cabinetType === t ? "active" : ""}
                 onClick={() => setLayerCabinetType(selected.id, t)}
               >
-                {CABINETS[t].label}({CABINETS[t].widthCm} × {CABINETS[t].heightCm})
+                {CABINETS[t].label} ({cm(CABINETS[t].widthCm)}x{cm(CABINETS[t].heightCm)})
               </button>
             ))}
           </div>
