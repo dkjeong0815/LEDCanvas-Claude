@@ -311,8 +311,12 @@ p {
   align-items: center;
   gap: 8px;
   margin: 0;
-  font-size: 16px;
+  font-size: 15px;
   font-weight: 700;
+  /* Warm against a cool palette: at this lightness the hue shift costs almost
+     nothing in contrast (12.96 against the panel, where the cool white was
+     13.07) and marks a heading without needing more size. */
+  color: #f2e8d5;
 }
 
 /* Continues the numbering of the stepper in the header: the sidebar is an
@@ -320,15 +324,18 @@ p {
 /* Filled, not tinted: at 18% alpha it sat 1.3:1 against the panel and read as
    a smudge rather than a number. Slate rather than the primary blue, because
    the 추가 button beside it is that blue and a filled blue circle next to a
-   filled blue button reads as something to press. Round, because in this app
-   only step numbers are round — buttons are 8px rects and chips are pills. */
+   filled blue button reads as something to press. The beige matches the title
+   so the two read as one marker rather than two unrelated accents, a shade
+   deeper so the number sits under the words rather than shouting over them.
+   Round, because in this app only step numbers are round — buttons are 8px
+   rects and chips are pills. */
 .panel-index {
   display: grid;
   place-items: center;
   width: 20px;
   height: 20px;
   border-radius: 50%;
-  background: #8a94a6;
+  background: #d9c9a3;
   color: #0f1115;
   font-size: 11px;
   font-weight: 700;
@@ -730,7 +737,7 @@ input[type="number"] {
 
 .summary th,
 .summary td {
-  text-align: left;
+  text-align: center;
   padding: 5px 6px;
   border-bottom: 1px solid var(--line);
   white-space: nowrap;
@@ -739,6 +746,20 @@ input[type="number"] {
 .summary th {
   color: var(--muted);
   font-weight: 500;
+}
+
+/* Centre suits "A × B" values, which have no place value to line up, and short
+   fixed-width figures. The two exceptions earn their keep: a name reads from
+   the left, and the pixel count is the one column read for magnitude — 819,200
+   against 1,279,200 only compares at a glance when the digits line up. */
+.summary .col-text,
+.sheet-table .col-text {
+  text-align: left;
+}
+
+.summary .col-total,
+.sheet-table .col-total {
+  text-align: right;
 }
 
 .summary tfoot td {
@@ -1000,7 +1021,7 @@ input[type="number"] {
 .sheet-table td {
   border: 0.2mm solid #bbb;
   padding: 1.2mm 2mm;
-  text-align: left;
+  text-align: center;
   white-space: nowrap;
 }
 

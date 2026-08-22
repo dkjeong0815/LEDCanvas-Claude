@@ -125,28 +125,28 @@ export default function PrintView({ onClose }: { onClose: () => void }) {
     <table className="sheet-table">
       <thead>
         <tr>
-          <th>레이어</th>
+          <th className="col-text">레이어</th>
           <th>캐비닛</th>
           <th>배열</th>
           <th>수량</th>
           <th>픽셀 피치(mm)</th>
           <th>크기(cm)</th>
           <th>해상도(px)</th>
-          <th>전체 해상도(px)</th>
+          <th className="col-total">전체 해상도(px)</th>
           <th>면적(m²)</th>
         </tr>
       </thead>
       <tbody>
         {rows.map((r) => (
           <tr key={r.id}>
-            <td>{r.label}</td>
+            <td className="col-text">{r.label}</td>
             <td>{r.cabinet}</td>
             <td>{r.grid}</td>
             <td>{r.count}</td>
             <td>{r.pitch}</td>
             <td>{r.size}</td>
             <td>{r.resolution}</td>
-            <td>{r.fullResolution}</td>
+            <td className="col-total">{r.fullResolution}</td>
             <td>{r.areaM2.toFixed(2)}</td>
           </tr>
         ))}

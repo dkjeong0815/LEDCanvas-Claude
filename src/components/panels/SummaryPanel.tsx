@@ -32,23 +32,23 @@ export default function SummaryPanel() {
         <table className="summary">
           <thead>
             <tr>
-              <th>레이어</th>
+              <th className="col-text">레이어</th>
               <th>캐비닛</th>
               <th>픽셀 피치</th>
               <th>크기(cm)</th>
               <th>해상도(px)</th>
-              <th>전체 해상도(px)</th>
+              <th className="col-total">전체 해상도(px)</th>
             </tr>
           </thead>
           <tbody>
             {rows.map((r) => (
               <tr key={r.id}>
-                <td>{r.label}</td>
+                <td className="col-text">{r.label}</td>
                 <td>{r.cabinets}</td>
                 <td>{r.pitch}</td>
                 <td>{r.size}</td>
                 <td>{r.resolution}</td>
-                <td>{r.fullResolution}</td>
+                <td className="col-total">{r.fullResolution}</td>
               </tr>
             ))}
           </tbody>
