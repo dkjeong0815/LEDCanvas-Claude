@@ -20,7 +20,10 @@ const SHEET_WIDTH_MM = 420 - 24;
 const SHEET_HEIGHT_MM = 297 - 24;
 /** paper-space height of the title block, table and footer around the artwork */
 const TITLE_BLOCK_MM = 26;
-const FOOTER_MM = 12;
+/* The footer said "LED 면 3개 · 캐비닛 합계 15개" while the title block already
+   said 3 and 15 two lines above it. Its one new figure, the total area, moved
+   up there, and the 12 mm it held went to the drawing. */
+const FOOTER_MM = 0;
 /* 7, not 9. The artwork is what the height is short of — the wall is 1.7:1 and
    the space left for it 2.1:1, so every millimetre the table gives back widens
    the drawing too. */
@@ -155,6 +158,10 @@ export default function PrintView({ onClose }: { onClose: () => void }) {
           <dd>{totals.cabinets}</dd>
         </div>
         <div>
+          <dt>총 면적</dt>
+          <dd>{totals.areaM2.toFixed(2)} m²</dd>
+        </div>
+        <div>
           <dt>작성일</dt>
           <dd>{today}</dd>
         </div>
@@ -264,12 +271,6 @@ export default function PrintView({ onClose }: { onClose: () => void }) {
             />
           </div>
           <SpecTable />
-          <footer className="sheet-foot">
-            <span>
-              LED 면 {layers.length}개 · 캐비닛 합계 {totals.cabinets}개 · 총 면적{" "}
-              {totals.areaM2.toFixed(2)} m²
-            </span>
-          </footer>
         </section>
 
       </div>

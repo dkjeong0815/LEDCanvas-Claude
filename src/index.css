@@ -984,16 +984,6 @@ input[type="number"] {
   flex-shrink: 0;
 }
 
-.sheet-foot {
-  display: flex;
-  justify-content: space-between;
-  border-top: 0.3mm solid #bbb;
-  padding-top: 2.5mm;
-  font-size: 3.4mm;
-  color: #333;
-  flex-shrink: 0;
-}
-
 .sheet-drawing {
   display: flex;
   flex-direction: column;
@@ -1103,6 +1093,14 @@ input[type="number"] {
   @page {
     size: A3 landscape;
     margin: 12mm;
+  }
+
+  /* Paper is light, whatever the screen is. Without this the browser paints
+     the page margin with the dark canvas colour that color-scheme: dark asks
+     for, and the rule below forces it onto the sheet — a #121212 rectangle
+     over all 420 x 297 mm, printing as a black border around the drawing. */
+  :root {
+    color-scheme: light;
   }
 
   /* Photos and filled cells are the content here, not decoration. */
